@@ -124,10 +124,6 @@ func parseClause(p *parser) *Clause {
 	consumeKeyword(p, "clause")
 	c.Name = consumeIdentifier(p)
 	c.Params = parseParams(p)
-	if peekKeyword(p) == "requires" {
-		consumeKeyword(p, "requires")
-		c.Reqs = parseClauseRequirements(p)
-	}
 	consumeTok(p, "{")
 	c.statements = parseStatements(p)
 	consumeTok(p, "}")

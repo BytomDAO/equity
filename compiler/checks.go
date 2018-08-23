@@ -75,14 +75,7 @@ func requireAllParamsUsedInClause(params []*Param, clause *Clause) error {
 				break
 			}
 		}
-		//if !used {
-		//	for _, r := range clause.Reqs {
-		//		if references(r.amountExpr, p.Name) || references(r.assetExpr, p.Name) {
-		//			used = true
-		//			break
-		//		}
-		//	}
-		//}
+
 		if !used {
 			return fmt.Errorf("parameter \"%s\" is unused in clause \"%s\"", p.Name, clause.Name)
 		}
@@ -124,12 +117,6 @@ func requireAllValuesDisposedOnce(contract *Contract, clause *Clause) error {
 	if err != nil {
 		return err
 	}
-	//for _, req := range clause.Reqs {
-	//	err = valueDisposedOnce(req.Name, clause)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
 	return nil
 }
 

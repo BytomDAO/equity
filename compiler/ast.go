@@ -61,10 +61,6 @@ type Clause struct {
 	// Params is the list of clause parameters.
 	Params []*Param `json:"params,omitempty"`
 
-	// Reqs is the list of requirements (from the clause's "requires"
-	// section).
-	Reqs []*ClauseReq `json:"reqs,omitempty"`
-
 	statements []statement
 
 	// BlockHeight is the list of expressions passed to greater()/less() in this

@@ -95,15 +95,7 @@ func Compile(r io.Reader) ([]*Contract, error) {
 						Asset:   s.lockedAsset.String(),
 						Program: s.program.String(),
 					}
-					//if s.locked.String() != contract.Value {
-					//	for _, r := range clause.Reqs {
-					//		if s.locked.String() == r.Name {
-					//			valueInfo.Asset = r.assetExpr.String()
-					//			valueInfo.Amount = r.amountExpr.String()
-					//			break
-					//		}
-					//	}
-					//}
+
 					clause.Values = append(clause.Values, valueInfo)
 				case *unlockStatement:
 					valueInfo := ValueInfo{
@@ -318,15 +310,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			return err
 		}
 	}
-	//for _, req := range clause.Reqs {
-	//	err = env.add(req.Name, valueType, roleClauseValue)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	req.Asset = req.assetExpr.String()
-	//	req.Amount = req.amountExpr.String()
-	//}
-
 	assignIndexes(clause)
 
 	var stk stack
@@ -340,10 +323,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 
 	// a count of the number of times each variable is referenced
 	counts := make(map[string]int)
-	//for _, req := range clause.Reqs {
-	//	req.assetExpr.countVarRefs(counts)
-	//	req.amountExpr.countVarRefs(counts)
-	//}
 	for _, s := range clause.statements {
 		s.countVarRefs(counts)
 	}
@@ -380,17 +359,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 				stk = b.addAmount(stk, contract.Value.Amount)
 				stk = b.addAsset(stk, contract.Value.Asset)
 			} else {
-				//var req *ClauseReq
-				//for _, r := range clause.Reqs {
-				//	if stmt.locked.String() == r.Name {
-				//		req = r
-				//		break
-				//	}
-				//}
-				//if req == nil {
-				//	return fmt.Errorf("unknown value \"%s\" in lock statement in clause \"%s\"", stmt.locked, clause.Name)
-				//}
-
 				if strings.Contains(stmt.lockedAmount.String(), contract.Value.Amount) {
 					stk = b.addAmount(stk, contract.Value.Amount)
 				}

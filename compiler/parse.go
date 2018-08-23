@@ -60,8 +60,12 @@ func parseContract(p *parser) *Contract {
 	consumeKeyword(p, "contract")
 	name := consumeIdentifier(p)
 	params := parseParams(p)
+	// locks amount of asset
 	consumeKeyword(p, "locks")
-	value := consumeIdentifier(p)
+	value := ValueInfo{}
+	value.Amount = consumeIdentifier(p)
+	consumeKeyword(p, "of")
+	value.Asset = consumeIdentifier(p)
 	consumeTok(p, "{")
 	clauses := parseClauses(p)
 	consumeTok(p, "}")
@@ -181,16 +185,20 @@ func parseVerifyStmt(p *parser) *verifyStatement {
 
 func parseLockStmt(p *parser) *lockStatement {
 	consumeKeyword(p, "lock")
-	locked := parseExpr(p)
+	lockedAmount := parseExpr(p)
+	consumeKeyword(p, "of")
+	lockedAsset := parseExpr(p)
 	consumeKeyword(p, "with")
 	program := parseExpr(p)
-	return &lockStatement{locked: locked, program: program}
+	return &lockStatement{lockedAmount: lockedAmount, lockedAsset: lockedAsset, program: program}
 }
 
 func parseUnlockStmt(p *parser) *unlockStatement {
 	consumeKeyword(p, "unlock")
-	expr := parseExpr(p)
-	return &unlockStatement{expr}
+	unlockedAmount := parseExpr(p)
+	consumeKeyword(p, "of")
+	unlockedAsset := parseExpr(p)
+	return &unlockStatement{unlockedAmount: unlockedAmount, unlockedAsset: unlockedAsset}
 }
 
 func parseExpr(p *parser) expression {

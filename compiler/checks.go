@@ -67,22 +67,22 @@ func requireAllParamsUsedInClause(params []*Param, clause *Clause) error {
 			case *verifyStatement:
 				used = references(s.expr, p.Name)
 			case *lockStatement:
-				used = references(s.locked, p.Name) || references(s.program, p.Name)
+				used = references(s.lockedAmount, p.Name) || references(s.lockedAsset, p.Name) || references(s.program, p.Name)
 			case *unlockStatement:
-				used = references(s.expr, p.Name)
+				used = references(s.unlockedAmount, p.Name) || references(s.unlockedAsset, p.Name)
 			}
 			if used {
 				break
 			}
 		}
-		if !used {
-			for _, r := range clause.Reqs {
-				if references(r.amountExpr, p.Name) || references(r.assetExpr, p.Name) {
-					used = true
-					break
-				}
-			}
-		}
+		//if !used {
+		//	for _, r := range clause.Reqs {
+		//		if references(r.amountExpr, p.Name) || references(r.assetExpr, p.Name) {
+		//			used = true
+		//			break
+		//		}
+		//	}
+		//}
 		if !used {
 			return fmt.Errorf("parameter \"%s\" is unused in clause \"%s\"", p.Name, clause.Name)
 		}
@@ -124,36 +124,36 @@ func requireAllValuesDisposedOnce(contract *Contract, clause *Clause) error {
 	if err != nil {
 		return err
 	}
-	for _, req := range clause.Reqs {
-		err = valueDisposedOnce(req.Name, clause)
-		if err != nil {
-			return err
-		}
-	}
+	//for _, req := range clause.Reqs {
+	//	err = valueDisposedOnce(req.Name, clause)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 	return nil
 }
 
-func valueDisposedOnce(name string, clause *Clause) error {
+func valueDisposedOnce(value ValueInfo, clause *Clause) error {
 	var count int
 	for _, s := range clause.statements {
 		switch stmt := s.(type) {
 		case *unlockStatement:
-			if references(stmt.expr, name) {
+			if references(stmt.unlockedAmount, value.Amount) && references(stmt.unlockedAsset, value.Asset) {
 				count++
 			}
 		case *lockStatement:
-			if references(stmt.locked, name) {
+			if references(stmt.lockedAmount, value.Amount) && references(stmt.lockedAsset, value.Asset) {
 				count++
 			}
 		}
 	}
 	switch count {
 	case 0:
-		return fmt.Errorf("value \"%s\" not disposed in clause \"%s\"", name, clause.Name)
+		return fmt.Errorf("valueAmount \"%s\" or valueAsset \"%s\" not disposed in clause \"%s\"", value.Amount, value.Asset, clause.Name)
 	case 1:
 		return nil
 	default:
-		return fmt.Errorf("value \"%s\" disposed multiple times in clause \"%s\"", name, clause.Name)
+		return fmt.Errorf("valueAmount \"%s\" or valueAsset \"%s\" disposed multiple times in clause \"%s\"", value.Amount, value.Asset, clause.Name)
 	}
 }
 
@@ -191,18 +191,24 @@ func typeCheckClause(contract *Contract, clause *Clause, env *environ) error {
 			}
 
 		case *lockStatement:
-			if t := stmt.locked.typ(env); t != valueType {
-				return fmt.Errorf("expression in lock statement in clause \"%s\" has type \"%s\", must be Value", clause.Name, t)
+			if t := stmt.lockedAmount.typ(env); !(t == intType || t == amountType) {
+				return fmt.Errorf("lockedAmount expression \"%s\" in lock statement in clause \"%s\" has type \"%s\", must be Value", stmt.lockedAmount, clause.Name, t)
+			}
+			if t := stmt.lockedAsset.typ(env); t != valueType {
+				return fmt.Errorf("lockedAsset expression \"%s\" in lock statement in clause \"%s\" has type \"%s\", must be Value", stmt.lockedAsset, clause.Name, t)
 			}
 			if t := stmt.program.typ(env); t != progType {
 				return fmt.Errorf("program in lock statement in clause \"%s\" has type \"%s\", must be Program", clause.Name, t)
 			}
 
 		case *unlockStatement:
-			if t := stmt.expr.typ(env); t != valueType {
-				return fmt.Errorf("expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Value", stmt.expr, clause.Name, t)
+			if t := stmt.unlockedAmount.typ(env); !(t == intType || t == amountType) {
+				return fmt.Errorf("unlockedAmount expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Value", stmt.unlockedAmount, clause.Name, t)
 			}
-			if stmt.expr.String() != contract.Value {
+			if t := stmt.unlockedAsset.typ(env); t != valueType {
+				return fmt.Errorf("unlockedAsset expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Value", stmt.unlockedAsset, clause.Name, t)
+			}
+			if stmt.unlockedAmount.String() != contract.Value.Amount || stmt.unlockedAsset.String() != contract.Value.Asset {
 				return fmt.Errorf("expression in unlock statement of clause \"%s\" must be the contract value", clause.Name)
 			}
 		}

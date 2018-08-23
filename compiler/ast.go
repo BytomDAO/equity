@@ -21,7 +21,7 @@ type Contract struct {
 	Clauses []*Clause `json:"clauses"`
 
 	// Value is the name of the value locked by the contract.
-	Value string `json:"value"`
+	Value ValueInfo `json:"value"`
 
 	// Body is the optimized bytecode of the contract body. This is not
 	// a complete program!  Use instantiate to turn this (plus some
@@ -121,24 +121,28 @@ func (s verifyStatement) countVarRefs(counts map[string]int) {
 }
 
 type lockStatement struct {
-	locked  expression
-	program expression
+	lockedAmount expression
+	lockedAsset  expression
+	program      expression
 
 	// Added as a decoration, used by CHECKOUTPUT
 	index int64
 }
 
 func (s lockStatement) countVarRefs(counts map[string]int) {
-	s.locked.countVarRefs(counts)
+	s.lockedAmount.countVarRefs(counts)
+	s.lockedAsset.countVarRefs(counts)
 	s.program.countVarRefs(counts)
 }
 
 type unlockStatement struct {
-	expr expression
+	unlockedAmount expression
+	unlockedAsset  expression
 }
 
 func (s unlockStatement) countVarRefs(counts map[string]int) {
-	s.expr.countVarRefs(counts)
+	s.unlockedAmount.countVarRefs(counts)
+	s.unlockedAsset.countVarRefs(counts)
 }
 
 type expression interface {

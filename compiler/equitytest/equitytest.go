@@ -1,155 +1,80 @@
 package equitytest
 
 const TrivialLock = `
-contract TrivialLock() locks locked {
+contract TrivialLock() locks x of y {
   clause trivialUnlock() {
-    unlock locked
+    unlock x of y
   }
 }
 `
 
 const LockWithPublicKey = `
-contract LockWithPublicKey(publicKey: PublicKey) locks locked {
+contract LockWithPublicKey(publicKey: PublicKey) locks x of y {
   clause unlockWithSig(sig: Signature) {
     verify checkTxSig(publicKey, sig)
-    unlock locked
+    unlock x of y
   }
 }
 `
 
 const LockWithPKHash = `
-contract LockWithPublicKeyHash(pubKeyHash: Hash) locks value {
+contract LockWithPublicKeyHash(pubKeyHash: Hash) locks x of y {
   clause spend(pubKey: PublicKey, sig: Signature) {
     verify sha3(pubKey) == pubKeyHash
     verify checkTxSig(pubKey, sig)
-    unlock value
+    unlock x of y
   }
 }
 `
 
 const LockWith2of3Keys = `
-contract LockWith3Keys(pubkey1, pubkey2, pubkey3: PublicKey) locks locked {
+contract LockWith3Keys(pubkey1, pubkey2, pubkey3: PublicKey) locks x of y {
   clause unlockWith2Sigs(sig1, sig2: Signature) {
     verify checkTxMultiSig([pubkey1, pubkey2, pubkey3], [sig1, sig2])
-    unlock locked
+    unlock x of y
   }
 }
 `
 
 const LockToOutput = `
-contract LockToOutput(address: Program) locks locked {
+contract LockToOutput(address: Program) locks x of y {
   clause relock() {
-    lock locked with address
+    lock x of y with address
   }
 }
 `
 
 const TradeOffer = `
-contract TradeOffer(requestedAsset: Asset, requestedAmount: Amount, sellerProgram: Program, sellerKey: PublicKey) locks offered {
-  clause trade() requires payment: requestedAmount of requestedAsset {
-    lock payment with sellerProgram
-    unlock offered
+contract TradeOffer(requestedAsset: Asset, requestedAmount: Amount, sellerProgram: Program, sellerKey: PublicKey) locks x of y {
+  clause trade() {
+    lock requestedAmount of requestedAsset with sellerProgram
+    unlock x of y
   }
   clause cancel(sellerSig: Signature) {
     verify checkTxSig(sellerKey, sellerSig)
-    lock offered with sellerProgram
+    unlock x of y
   }
 }
 `
 
 const EscrowedTransfer = `
-contract EscrowedTransfer(agent: PublicKey, sender: Program, recipient: Program) locks value {
+contract EscrowedTransfer(agent: PublicKey, sender: Program, recipient: Program) locks x of y {
   clause approve(sig: Signature) {
     verify checkTxSig(agent, sig)
-    lock value with recipient
+    lock x of y with recipient
   }
   clause reject(sig: Signature) {
     verify checkTxSig(agent, sig)
-    lock value with sender
-  }
-}
-`
-
-const CollateralizedLoan = `
-contract CollateralizedLoan(balanceAsset: Asset, balanceAmount: Amount, finalHeight: Integer, lender: Program, borrower: Program) locks collateral {
-  clause repay() requires payment: balanceAmount of balanceAsset {
-    lock payment with lender
-    lock collateral with borrower
-  }
-  clause default() {
-    verify above(finalHeight)
-    lock collateral with lender
+    lock x of y with sender
   }
 }
 `
 
 const RevealPreimage = `
-contract RevealPreimage(hash: Hash) locks value {
+contract RevealPreimage(hash: Hash) locks x of y {
   clause reveal(string: String) {
     verify sha3(string) == hash
-    unlock value
-  }
-}
-`
-
-const PriceChanger = `
-contract PriceChanger(askAmount: Amount, askAsset: Asset, sellerKey: PublicKey, sellerProg: Program) locks offered {
-  clause changePrice(newAmount: Amount, newAsset: Asset, sig: Signature) {
-    verify checkTxSig(sellerKey, sig)
-    lock offered with PriceChanger(newAmount, newAsset, sellerKey, sellerProg)
-  }
-  clause redeem() requires payment: askAmount of askAsset {
-    lock payment with sellerProg
-    unlock offered
-  }
-}
-`
-
-const CallOptionWithSettlement = `
-contract CallOptionWithSettlement(strikePrice: Amount,
-                    strikeCurrency: Asset,
-                    sellerProgram: Program,
-                    sellerKey: PublicKey,
-                    buyerKey: PublicKey,
-                    finalHeight: Integer) locks underlying {
-  clause exercise(buyerSig: Signature)
-                 requires payment: strikePrice of strikeCurrency {
-    verify below(finalHeight)
-    verify checkTxSig(buyerKey, buyerSig)
-    lock payment with sellerProgram
-    unlock underlying
-  }
-  clause expire() {
-    verify above(finalHeight)
-    lock underlying with sellerProgram
-  }
-  clause settle(sellerSig: Signature, buyerSig: Signature) {
-    verify checkTxSig(sellerKey, sellerSig)
-    verify checkTxSig(buyerKey, buyerSig)
-    unlock underlying
-  }
-}
-`
-
-const OneTwo = `
-contract Two(b, c: Program, expirationHeight: Integer) locks value {
-  clause redeem() {
-    verify below(expirationHeight)
-    lock value with b
-  }
-  clause default() {
-    verify above(expirationHeight)
-    lock value with c
-  }
-}
-contract One(a, b, c: Program, switchHeight, blockHeight: Integer) locks value {
-  clause redeem() {
-    verify below(switchHeight)
-    lock value with a
-  }
-  clause switch() {
-    verify above(switchHeight)
-    lock value with Two(b, c, blockHeight)
+    unlock x of y
   }
 }
 `

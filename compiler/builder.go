@@ -85,12 +85,12 @@ func (b *builder) addData(stk stack, data []byte) stack {
 	return b.add(s, stk.add(s))
 }
 
-func (b *builder) addAmount(stk stack) stack {
-	return b.add("AMOUNT", stk.add("<amount>"))
+func (b *builder) addAmount(stk stack, desc string) stack {
+	return b.add("AMOUNT", stk.add(desc))
 }
 
-func (b *builder) addAsset(stk stack) stack {
-	return b.add("ASSET", stk.add("<asset>"))
+func (b *builder) addAsset(stk stack, desc string) stack {
+	return b.add("ASSET", stk.add(desc))
 }
 
 func (b *builder) addCheckOutput(stk stack, desc string) stack {

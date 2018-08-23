@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
@@ -89,21 +90,17 @@ func Compile(r io.Reader) ([]*Contract, error) {
 				switch s := stmt.(type) {
 				case *lockStatement:
 					valueInfo := ValueInfo{
-						Name:    s.locked.String(),
+						Amount:  s.lockedAmount.String(),
+						Asset:   s.lockedAsset.String(),
 						Program: s.program.String(),
 					}
-					if s.locked.String() != contract.Value {
-						for _, r := range clause.Reqs {
-							if s.locked.String() == r.Name {
-								valueInfo.Asset = r.assetExpr.String()
-								valueInfo.Amount = r.amountExpr.String()
-								break
-							}
-						}
-					}
+
 					clause.Values = append(clause.Values, valueInfo)
 				case *unlockStatement:
-					valueInfo := ValueInfo{Name: contract.Value}
+					valueInfo := ValueInfo{
+						Amount: contract.Value.Amount,
+						Asset:  contract.Value.Asset,
+					}
 					clause.Values = append(clause.Values, valueInfo)
 				}
 			}
@@ -182,10 +179,15 @@ func compileContract(contract *Contract, globalEnv *environ) error {
 			return err
 		}
 	}
-	err = env.add(contract.Value, valueType, roleContractValue)
-	if err != nil {
+
+	// value is spilt with valueAmount and valueAsset
+	if err = env.add(contract.Value.Amount, amountType, roleContractValue); err != nil {
 		return err
 	}
+	if err = env.add(contract.Value.Asset, assetType, roleContractValue); err != nil {
+		return err
+	}
+
 	for _, c := range contract.Clauses {
 		err = env.add(c.Name, nilType, roleClause)
 		if err != nil {
@@ -193,10 +195,6 @@ func compileContract(contract *Contract, globalEnv *environ) error {
 		}
 	}
 
-	err = prohibitValueParams(contract)
-	if err != nil {
-		return err
-	}
 	err = prohibitSigParams(contract)
 	if err != nil {
 		return err
@@ -305,15 +303,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			return err
 		}
 	}
-	for _, req := range clause.Reqs {
-		err = env.add(req.Name, valueType, roleClauseValue)
-		if err != nil {
-			return err
-		}
-		req.Asset = req.assetExpr.String()
-		req.Amount = req.amountExpr.String()
-	}
-
 	assignIndexes(clause)
 
 	var stk stack
@@ -327,10 +316,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 
 	// a count of the number of times each variable is referenced
 	counts := make(map[string]int)
-	for _, req := range clause.Reqs {
-		req.assetExpr.countVarRefs(counts)
-		req.amountExpr.countVarRefs(counts)
-	}
 	for _, s := range clause.statements {
 		s.countVarRefs(counts)
 	}
@@ -363,29 +348,26 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			// TODO: permit more complex expressions for locked,
 			// like "lock x+y with foo" (?)
 
-			if stmt.locked.String() == contract.Value {
-				stk = b.addAmount(stk)
-				stk = b.addAsset(stk)
+			if stmt.lockedAmount.String() == contract.Value.Amount && stmt.lockedAsset.String() == contract.Value.Asset {
+				stk = b.addAmount(stk, contract.Value.Amount)
+				stk = b.addAsset(stk, contract.Value.Asset)
 			} else {
-				var req *ClauseReq
-				for _, r := range clause.Reqs {
-					if stmt.locked.String() == r.Name {
-						req = r
-						break
-					}
+				if strings.Contains(stmt.lockedAmount.String(), contract.Value.Amount) {
+					stk = b.addAmount(stk, contract.Value.Amount)
 				}
-				if req == nil {
-					return fmt.Errorf("unknown value \"%s\" in lock statement in clause \"%s\"", stmt.locked, clause.Name)
+
+				if strings.Contains(stmt.lockedAsset.String(), contract.Value.Asset) {
+					stk = b.addAsset(stk, contract.Value.Asset)
 				}
 
 				// amount
-				stk, err = compileExpr(b, stk, contract, clause, env, counts, req.amountExpr)
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAmount)
 				if err != nil {
 					return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
 				}
 
 				// asset
-				stk, err = compileExpr(b, stk, contract, clause, env, counts, req.assetExpr)
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAsset)
 				if err != nil {
 					return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
 				}
@@ -400,7 +382,8 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 				return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
 			}
 
-			stk = b.addCheckOutput(stk, fmt.Sprintf("checkOutput(%s, %s)", stmt.locked, stmt.program))
+			stk = b.addCheckOutput(stk, fmt.Sprintf("checkOutput(%s, %s, %s)",
+				stmt.lockedAmount.String(), stmt.lockedAsset.String(), stmt.program))
 			stk = b.addVerify(stk)
 
 		case *unlockStatement:
@@ -447,12 +430,12 @@ func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env 
 		}
 
 		lType := e.left.typ(env)
-		if e.op.left != "" && lType != e.op.left {
+		if e.op.left != "" && !(lType == e.op.left || lType == amountType) {
 			return stk, fmt.Errorf("in \"%s\", left operand has type \"%s\", must be \"%s\"", e, lType, e.op.left)
 		}
 
 		rType := e.right.typ(env)
-		if e.op.right != "" && rType != e.op.right {
+		if e.op.right != "" && !(rType == e.op.right || rType == amountType) {
 			return stk, fmt.Errorf("in \"%s\", right operand has type \"%s\", must be \"%s\"", e, rType, e.op.right)
 		}
 

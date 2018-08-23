@@ -60,8 +60,12 @@ func parseContract(p *parser) *Contract {
 	consumeKeyword(p, "contract")
 	name := consumeIdentifier(p)
 	params := parseParams(p)
+	// locks amount of asset
 	consumeKeyword(p, "locks")
-	value := consumeIdentifier(p)
+	value := ValueInfo{}
+	value.Amount = consumeIdentifier(p)
+	consumeKeyword(p, "of")
+	value.Asset = consumeIdentifier(p)
 	consumeTok(p, "{")
 	clauses := parseClauses(p)
 	consumeTok(p, "}")
@@ -120,36 +124,10 @@ func parseClause(p *parser) *Clause {
 	consumeKeyword(p, "clause")
 	c.Name = consumeIdentifier(p)
 	c.Params = parseParams(p)
-	if peekKeyword(p) == "requires" {
-		consumeKeyword(p, "requires")
-		c.Reqs = parseClauseRequirements(p)
-	}
 	consumeTok(p, "{")
 	c.statements = parseStatements(p)
 	consumeTok(p, "}")
 	return &c
-}
-
-func parseClauseRequirements(p *parser) []*ClauseReq {
-	var result []*ClauseReq
-	first := true
-	for {
-		switch {
-		case first:
-			first = false
-		case peekTok(p, ","):
-			consumeTok(p, ",")
-		default:
-			return result
-		}
-		var req ClauseReq
-		req.Name = consumeIdentifier(p)
-		consumeTok(p, ":")
-		req.amountExpr = parseExpr(p)
-		consumeKeyword(p, "of")
-		req.assetExpr = parseExpr(p)
-		result = append(result, &req)
-	}
 }
 
 func parseStatements(p *parser) []statement {
@@ -181,16 +159,20 @@ func parseVerifyStmt(p *parser) *verifyStatement {
 
 func parseLockStmt(p *parser) *lockStatement {
 	consumeKeyword(p, "lock")
-	locked := parseExpr(p)
+	lockedAmount := parseExpr(p)
+	consumeKeyword(p, "of")
+	lockedAsset := parseExpr(p)
 	consumeKeyword(p, "with")
 	program := parseExpr(p)
-	return &lockStatement{locked: locked, program: program}
+	return &lockStatement{lockedAmount: lockedAmount, lockedAsset: lockedAsset, program: program}
 }
 
 func parseUnlockStmt(p *parser) *unlockStatement {
 	consumeKeyword(p, "unlock")
-	expr := parseExpr(p)
-	return &unlockStatement{expr}
+	unlockedAmount := parseExpr(p)
+	consumeKeyword(p, "of")
+	unlockedAsset := parseExpr(p)
+	return &unlockStatement{unlockedAmount: unlockedAmount, unlockedAsset: unlockedAsset}
 }
 
 func parseExpr(p *parser) expression {

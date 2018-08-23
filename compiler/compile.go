@@ -90,7 +90,6 @@ func Compile(r io.Reader) ([]*Contract, error) {
 				switch s := stmt.(type) {
 				case *lockStatement:
 					valueInfo := ValueInfo{
-						//Name:    s.locked.String(),
 						Amount:  s.lockedAmount.String(),
 						Asset:   s.lockedAsset.String(),
 						Program: s.program.String(),
@@ -182,12 +181,10 @@ func compileContract(contract *Contract, globalEnv *environ) error {
 	}
 
 	// value is spilt with valueAmount and valueAsset
-	err = env.add(contract.Value.Amount, amountType, roleContractValue)
-	if err != nil {
+	if err = env.add(contract.Value.Amount, amountType, roleContractValue); err != nil {
 		return err
 	}
-	err = env.add(contract.Value.Asset, valueType, roleContractValue)
-	if err != nil {
+	if err = env.add(contract.Value.Asset, assetType, roleContractValue); err != nil {
 		return err
 	}
 
@@ -198,10 +195,6 @@ func compileContract(contract *Contract, globalEnv *environ) error {
 		}
 	}
 
-	err = prohibitValueParams(contract)
-	if err != nil {
-		return err
-	}
 	err = prohibitSigParams(contract)
 	if err != nil {
 		return err

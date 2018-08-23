@@ -26,22 +26,6 @@ func prohibitSigParams(contract *Contract) error {
 	return nil
 }
 
-func prohibitValueParams(contract *Contract) error {
-	for _, p := range contract.Params {
-		if p.Type == valueType {
-			return fmt.Errorf("Value-typed contract parameter \"%s\" must appear in a \"locks\" clause", p.Name)
-		}
-	}
-	for _, c := range contract.Clauses {
-		for _, p := range c.Params {
-			if p.Type == valueType {
-				return fmt.Errorf("Value-typed parameter \"%s\" of clause \"%s\" must appear in a \"requires\" clause", p.Name, c.Name)
-			}
-		}
-	}
-	return nil
-}
-
 func requireAllParamsUsedInClauses(params []*Param, clauses []*Clause) error {
 	for _, p := range params {
 		used := false
@@ -179,10 +163,10 @@ func typeCheckClause(contract *Contract, clause *Clause, env *environ) error {
 
 		case *lockStatement:
 			if t := stmt.lockedAmount.typ(env); !(t == intType || t == amountType) {
-				return fmt.Errorf("lockedAmount expression \"%s\" in lock statement in clause \"%s\" has type \"%s\", must be Value", stmt.lockedAmount, clause.Name, t)
+				return fmt.Errorf("lockedAmount expression \"%s\" in lock statement in clause \"%s\" has type \"%s\", must be Integer", stmt.lockedAmount, clause.Name, t)
 			}
-			if t := stmt.lockedAsset.typ(env); t != valueType {
-				return fmt.Errorf("lockedAsset expression \"%s\" in lock statement in clause \"%s\" has type \"%s\", must be Value", stmt.lockedAsset, clause.Name, t)
+			if t := stmt.lockedAsset.typ(env); t != assetType {
+				return fmt.Errorf("lockedAsset expression \"%s\" in lock statement in clause \"%s\" has type \"%s\", must be Asset", stmt.lockedAsset, clause.Name, t)
 			}
 			if t := stmt.program.typ(env); t != progType {
 				return fmt.Errorf("program in lock statement in clause \"%s\" has type \"%s\", must be Program", clause.Name, t)
@@ -190,13 +174,14 @@ func typeCheckClause(contract *Contract, clause *Clause, env *environ) error {
 
 		case *unlockStatement:
 			if t := stmt.unlockedAmount.typ(env); !(t == intType || t == amountType) {
-				return fmt.Errorf("unlockedAmount expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Value", stmt.unlockedAmount, clause.Name, t)
+				return fmt.Errorf("unlockedAmount expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Integer", stmt.unlockedAmount, clause.Name, t)
 			}
-			if t := stmt.unlockedAsset.typ(env); t != valueType {
-				return fmt.Errorf("unlockedAsset expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Value", stmt.unlockedAsset, clause.Name, t)
+			if t := stmt.unlockedAsset.typ(env); t != assetType {
+				return fmt.Errorf("unlockedAsset expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Asset", stmt.unlockedAsset, clause.Name, t)
 			}
 			if stmt.unlockedAmount.String() != contract.Value.Amount || stmt.unlockedAsset.String() != contract.Value.Asset {
-				return fmt.Errorf("expression in unlock statement of clause \"%s\" must be the contract value", clause.Name)
+				return fmt.Errorf("amount \"%s\" of asset \"%s\" expression in unlock statement of clause \"%s\" must be the contract valueAmount \"%s\" of valueAsset \"%s\"",
+					stmt.unlockedAmount.String(), stmt.unlockedAsset.String(), clause.Name, contract.Value.Amount, contract.Value.Asset)
 			}
 		}
 	}

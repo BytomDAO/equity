@@ -130,28 +130,6 @@ func parseClause(p *parser) *Clause {
 	return &c
 }
 
-func parseClauseRequirements(p *parser) []*ClauseReq {
-	var result []*ClauseReq
-	first := true
-	for {
-		switch {
-		case first:
-			first = false
-		case peekTok(p, ","):
-			consumeTok(p, ",")
-		default:
-			return result
-		}
-		var req ClauseReq
-		req.Name = consumeIdentifier(p)
-		consumeTok(p, ":")
-		req.amountExpr = parseExpr(p)
-		consumeKeyword(p, "of")
-		req.assetExpr = parseExpr(p)
-		result = append(result, &req)
-	}
-}
-
 func parseStatements(p *parser) []statement {
 	var statements []statement
 	for !peekTok(p, "}") {

@@ -48,6 +48,8 @@ func requireAllParamsUsedInClause(params []*Param, clause *Clause) error {
 		used := false
 		for _, stmt := range clause.statements {
 			switch s := stmt.(type) {
+			case *defineStatement:
+				used = references(s.expr, p.Name)
 			case *verifyStatement:
 				used = references(s.expr, p.Name)
 			case *lockStatement:

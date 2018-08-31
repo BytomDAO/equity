@@ -78,3 +78,14 @@ contract RevealPreimage(hash: Hash) locks amount of asset {
   }
 }
 `
+
+const TestDefineVar = `
+contract TestDefineVar(result: Integer) locks valueAmount of valueAsset {
+  clause LockWithMath(left: Integer, right: Integer) {
+    define calculate: Integer = left + right
+    verify left != calculate
+    verify result == calculate
+    unlock valueAmount of valueAsset
+  }
+}
+`

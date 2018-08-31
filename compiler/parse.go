@@ -141,6 +141,8 @@ func parseStatements(p *parser) []statement {
 
 func parseStatement(p *parser) statement {
 	switch peekKeyword(p) {
+	case "define":
+		return parseDefineStmt(p)
 	case "verify":
 		return parseVerifyStmt(p)
 	case "lock":
@@ -149,6 +151,16 @@ func parseStatement(p *parser) statement {
 		return parseUnlockStmt(p)
 	}
 	panic(parseErr(p.buf, p.pos, "unknown keyword \"%s\"", peekKeyword(p)))
+}
+
+func parseDefineStmt(p *parser) *defineStatement {
+	consumeKeyword(p, "define")
+	variableName := consumeIdentifier(p)
+	consumeTok(p, ":")
+	variableType := consumeIdentifier(p)
+	consumeTok(p, "=")
+	expr := parseExpr(p)
+	return &defineStatement{varName: &Param{Name: variableName, Type: typeDesc(variableType)}, expr: expr}
 }
 
 func parseVerifyStmt(p *parser) *verifyStatement {

@@ -56,6 +56,11 @@ func TestCompile(t *testing.T) {
 			equitytest.RevealPreimage,
 			"7caa87",
 		},
+		{
+			"TestDefineVar",
+			equitytest.TestDefineVar,
+			"52797b937b7887916987",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

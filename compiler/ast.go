@@ -108,6 +108,15 @@ type statement interface {
 	countVarRefs(map[string]int)
 }
 
+type defineStatement struct {
+	varName *Param
+	expr    expression
+}
+
+func (s defineStatement) countVarRefs(counts map[string]int) {
+	s.expr.countVarRefs(counts)
+}
+
 type verifyStatement struct {
 	expr expression
 }

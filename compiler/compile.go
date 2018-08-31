@@ -322,6 +322,27 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 
 	for _, s := range clause.statements {
 		switch stmt := s.(type) {
+		case *defineStatement:
+			// variable
+			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
+			if err != nil {
+				return errors.Wrapf(err, "in define statement in clause \"%s\"", clause.Name)
+			}
+
+			// check variable type
+			if stmt.expr.typ(env) != stmt.varName.Type {
+				return fmt.Errorf("expression in define statement in clause \"%s\" has type \"%s\", must be \"%s\"",
+					clause.Name, stmt.expr.typ(env), stmt.varName.Type)
+			}
+
+			// modify stack name
+			stk.str = stmt.varName.Name
+
+			// add environ for define variable
+			if err = env.add(stmt.varName.Name, stmt.varName.Type, roleClauseVariable); err != nil {
+				return err
+			}
+
 		case *verifyStatement:
 			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
 			if err != nil {

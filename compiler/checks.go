@@ -36,6 +36,7 @@ func requireAllParamsUsedInClauses(params []*Param, clauses []*Clause) error {
 				break
 			}
 		}
+
 		if !used {
 			return fmt.Errorf("parameter \"%s\" is unused", p.Name)
 		}
@@ -47,17 +48,7 @@ func requireAllParamsUsedInClause(params []*Param, clause *Clause) error {
 	for _, p := range params {
 		used := false
 		for _, stmt := range clause.statements {
-			switch s := stmt.(type) {
-			case *defineStatement:
-				used = references(s.expr, p.Name)
-			case *verifyStatement:
-				used = references(s.expr, p.Name)
-			case *lockStatement:
-				used = references(s.lockedAmount, p.Name) || references(s.lockedAsset, p.Name) || references(s.program, p.Name)
-			case *unlockStatement:
-				used = references(s.unlockedAmount, p.Name) || references(s.unlockedAsset, p.Name)
-			}
-			if used {
+			if used = checkParamUsedInStatement(p, stmt); used {
 				break
 			}
 		}
@@ -67,6 +58,37 @@ func requireAllParamsUsedInClause(params []*Param, clause *Clause) error {
 		}
 	}
 	return nil
+}
+
+func checkParamUsedInStatement(param *Param, stmt statement) (used bool) {
+	switch s := stmt.(type) {
+	case *ifStatement:
+		used = references(s.condition, param.Name)
+		for _, st := range s.body.trueBody {
+			if used = checkParamUsedInStatement(param, st); used {
+				break
+			}
+		}
+
+		if !used {
+			for _, st := range s.body.falseBody {
+				if used = checkParamUsedInStatement(param, st); used {
+					break
+				}
+			}
+		}
+
+	case *defineStatement:
+		used = references(s.expr, param.Name)
+	case *verifyStatement:
+		used = references(s.expr, param.Name)
+	case *lockStatement:
+		used = references(s.lockedAmount, param.Name) || references(s.lockedAsset, param.Name) || references(s.program, param.Name)
+	case *unlockStatement:
+		used = references(s.unlockedAmount, param.Name) || references(s.unlockedAsset, param.Name)
+	}
+
+	return used
 }
 
 func references(expr expression, name string) bool {

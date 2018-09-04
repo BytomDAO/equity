@@ -371,21 +371,27 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		}
 		stk = b.addJumpIf(stk, label)
 		b.addJumpTarget(stk, "if")
+		condStk := stk
 
-		// compile the true body of ifStatement
-		for _, stat := range stmt.body.trueBody {
-			if stk, err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
-				return stk, err
+		if len(stmt.body.trueBody) != 0 {
+			stk = condStk
+
+			// compile the true body of ifStatement
+			for _, st := range stmt.body.trueBody {
+				if stk, err = compileStatement(b, stk, contract, env, clause, counts, st); err != nil {
+					return stk, err
+				}
 			}
 		}
 
 		if len(stmt.body.falseBody) != 0 {
+			stk = condStk
 			b.addJump(stk, "endif")
 			b.addJumpTarget(stk, "else")
 
 			// compile the false body of ifStatement
-			for _, stat := range stmt.body.falseBody {
-				if stk, err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
+			for _, st := range stmt.body.falseBody {
+				if stk, err = compileStatement(b, stk, contract, env, clause, counts, st); err != nil {
 					return stk, err
 				}
 			}

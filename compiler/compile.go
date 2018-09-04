@@ -330,7 +330,7 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	}
 
 	for _, stat := range clause.statements {
-		if err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
+		if stk, err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
 			return err
 		}
 	}
@@ -351,14 +351,13 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	return nil
 }
 
-func compileStatement(b *builder, stk stack, contract *Contract, env *environ, clause *Clause, counts map[string]int, stat statement) error {
+func compileStatement(b *builder, stk stack, contract *Contract, env *environ, clause *Clause, counts map[string]int, stat statement) (stack, error) {
 	var err error
-
 	switch stmt := stat.(type) {
 	case *ifStatement:
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.condition)
 		if err != nil {
-			return errors.Wrapf(err, "in check condition of ifStatement in clause \"%s\"", clause.Name)
+			return stk, errors.Wrapf(err, "in check condition of ifStatement in clause \"%s\"", clause.Name)
 		}
 		conditionExpr := stk.str
 		stk = b.addBoolean(stk, false)
@@ -368,8 +367,8 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 
 		// compile the true body of ifStatement
 		for _, stat := range stmt.body.trueBody {
-			if err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
-				return err
+			if stk, err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
+				return stk, err
 			}
 		}
 		b.addJump(stk, "endif")
@@ -377,8 +376,8 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 
 		// compile the false body of ifStatement
 		for _, stat := range stmt.body.falseBody {
-			if err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
-				return err
+			if stk, err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
+				return stk, err
 			}
 		}
 		b.addJumpTarget(stk, "endif")
@@ -387,12 +386,12 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		// variable
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
 		if err != nil {
-			return errors.Wrapf(err, "in define statement in clause \"%s\"", clause.Name)
+			return stk, errors.Wrapf(err, "in define statement in clause \"%s\"", clause.Name)
 		}
 
 		// check variable type
 		if stmt.expr.typ(env) != stmt.varName.Type {
-			return fmt.Errorf("expression in define statement in clause \"%s\" has type \"%s\", must be \"%s\"",
+			return stk, fmt.Errorf("expression in define statement in clause \"%s\" has type \"%s\", must be \"%s\"",
 				clause.Name, stmt.expr.typ(env), stmt.varName.Type)
 		}
 
@@ -401,13 +400,13 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 
 		// add environ for define variable
 		if err = env.add(stmt.varName.Name, stmt.varName.Type, roleClauseVariable); err != nil {
-			return err
+			return stk, err
 		}
 
 	case *verifyStatement:
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
 		if err != nil {
-			return errors.Wrapf(err, "in verify statement in clause \"%s\"", clause.Name)
+			return stk, errors.Wrapf(err, "in verify statement in clause \"%s\"", clause.Name)
 		}
 		stk = b.addVerify(stk)
 
@@ -445,13 +444,13 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			// amount
 			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAmount)
 			if err != nil {
-				return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
 			}
 
 			// asset
 			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAsset)
 			if err != nil {
-				return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
 			}
 		}
 
@@ -461,7 +460,7 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		// prog
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.program)
 		if err != nil {
-			return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+			return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
 		}
 
 		stk = b.addCheckOutput(stk, fmt.Sprintf("checkOutput(%s, %s, %s)",
@@ -476,7 +475,7 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		}
 	}
 
-	return nil
+	return stk, nil
 }
 
 func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env *environ, counts map[string]int, expr expression) (stack, error) {

@@ -319,12 +319,12 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	for _, s := range clause.statements {
 		s.countVarRefs(counts)
 		if stmt, ok := s.(*ifStatement); ok {
-			for _, st := range stmt.body.trueBody {
-				st.countVarRefs(counts)
+			for _, trueStmt := range stmt.body.trueBody {
+				trueStmt.countVarRefs(counts)
 			}
 
-			for _, st := range stmt.body.falseBody {
-				st.countVarRefs(counts)
+			for _, falseStmt := range stmt.body.falseBody {
+				falseStmt.countVarRefs(counts)
 			}
 		}
 	}
@@ -362,7 +362,14 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		conditionExpr := stk.str
 		stk = b.addBoolean(stk, false)
 		stk = b.addEqual(stk, fmt.Sprintf("(%s == false)", conditionExpr)) // stack: [... <condition_result == false>]
-		stk = b.addJumpIf(stk, "else")
+
+		var label string
+		if len(stmt.body.falseBody) != 0 {
+			label = "else"
+		} else {
+			label = "endif"
+		}
+		stk = b.addJumpIf(stk, label)
 		b.addJumpTarget(stk, "if")
 
 		// compile the true body of ifStatement
@@ -371,13 +378,16 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 				return stk, err
 			}
 		}
-		b.addJump(stk, "endif")
-		b.addJumpTarget(stk, "else")
 
-		// compile the false body of ifStatement
-		for _, stat := range stmt.body.falseBody {
-			if stk, err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
-				return stk, err
+		if len(stmt.body.falseBody) != 0 {
+			b.addJump(stk, "endif")
+			b.addJumpTarget(stk, "else")
+
+			// compile the false body of ifStatement
+			for _, stat := range stmt.body.falseBody {
+				if stk, err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
+					return stk, err
+				}
 			}
 		}
 		b.addJumpTarget(stk, "endif")

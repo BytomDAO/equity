@@ -63,7 +63,10 @@ func requireAllParamsUsedInClause(params []*Param, clause *Clause) error {
 func checkParamUsedInStatement(param *Param, stmt statement) (used bool) {
 	switch s := stmt.(type) {
 	case *ifStatement:
-		used = references(s.condition, param.Name)
+		if used = references(s.condition, param.Name); used {
+			return used
+		}
+
 		for _, st := range s.body.trueBody {
 			if used = checkParamUsedInStatement(param, st); used {
 				break

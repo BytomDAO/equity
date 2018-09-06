@@ -61,6 +61,16 @@ func TestCompile(t *testing.T) {
 			equitytest.TestDefineVar,
 			"52797b937b7887916987",
 		},
+		{
+			"TestSigIf",
+			equitytest.TestSigIf,
+			"53797b879169765379a00087641a0000007b7ba069631d0000007ca069",
+		},
+		{
+			"TestIfAndMultiClause",
+			equitytest.TestIfAndMultiClause,
+			"7b641d0000007087916976547aa0008764180000007ba06963220000007b7bae7cac",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

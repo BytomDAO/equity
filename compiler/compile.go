@@ -317,14 +317,14 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	// a count of the number of times each variable is referenced
 	counts := make(map[string]int)
 	for _, s := range clause.statements {
-		s.countVarRefs(counts)
+		s.countVarRefs(counts, false)
 		if stmt, ok := s.(*ifStatement); ok {
 			for _, trueStmt := range stmt.body.trueBody {
-				trueStmt.countVarRefs(counts)
+				trueStmt.countVarRefs(counts, false)
 			}
 
 			for _, falseStmt := range stmt.body.falseBody {
-				falseStmt.countVarRefs(counts)
+				falseStmt.countVarRefs(counts, false)
 			}
 		}
 	}
@@ -355,14 +355,19 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 	var err error
 	switch stmt := stat.(type) {
 	case *ifStatement:
+		// compile condition expression
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.condition)
 		if err != nil {
 			return stk, errors.Wrapf(err, "in check condition of ifStatement in clause \"%s\"", clause.Name)
 		}
+
+		// jump to falseBody when condition is false, while the JUMPIF instruction will be run success when
+		// the value of dataStack is true, therefore add this check
 		conditionExpr := stk.str
 		stk = b.addBoolean(stk, false)
 		stk = b.addEqual(stk, fmt.Sprintf("(%s == false)", conditionExpr)) // stack: [... <condition_result == false>]
 
+		// add label
 		var label string
 		if len(stmt.body.falseBody) != 0 {
 			label = "else"
@@ -371,12 +376,20 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		}
 		stk = b.addJumpIf(stk, label)
 		b.addJumpTarget(stk, "if")
+
+		// temporary store stack and counts for falseBody
 		condStk := stk
+		elseCounts := make(map[string]int)
+		for k, v := range counts {
+			elseCounts[k] = v
+		}
 
+		// compile trueBody statements
 		if len(stmt.body.trueBody) != 0 {
-			stk = condStk
+			for _, st := range stmt.body.falseBody {
+				st.countVarRefs(counts, true)
+			}
 
-			// compile the true body of ifStatement
 			for _, st := range stmt.body.trueBody {
 				if stk, err = compileStatement(b, stk, contract, env, clause, counts, st); err != nil {
 					return stk, err
@@ -384,12 +397,21 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			}
 		}
 
+		// compile falseBody statements
 		if len(stmt.body.falseBody) != 0 {
+			counts := make(map[string]int)
+			for k, v := range elseCounts {
+				counts[k] = v
+			}
+
+			for _, st := range stmt.body.trueBody {
+				st.countVarRefs(counts, true)
+			}
+
 			stk = condStk
 			b.addJump(stk, "endif")
 			b.addJumpTarget(stk, "else")
 
-			// compile the false body of ifStatement
 			for _, st := range stmt.body.falseBody {
 				if stk, err = compileStatement(b, stk, contract, env, clause, counts, st); err != nil {
 					return stk, err

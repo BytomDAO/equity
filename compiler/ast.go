@@ -266,6 +266,9 @@ func (e varRef) typ(env *environ) typeDesc {
 func (e varRef) countVarRefs(counts map[string]int, flag bool) {
 	if flag {
 		counts[string(e)]--
+		if counts[string(e)] < 0 {
+			panic("the count of used variable is less than 0")
+		}
 	} else {
 		counts[string(e)]++
 	}

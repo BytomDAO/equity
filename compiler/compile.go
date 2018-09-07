@@ -386,8 +386,8 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 
 		// compile trueBody statements
 		if len(stmt.body.trueBody) != 0 {
-			for _, st := range stmt.body.falseBody {
-				st.countVarRefs(counts, true)
+			for _, st := range stmt.body.trueBody {
+				st.countVarRefs(counts, false)
 			}
 
 			for _, st := range stmt.body.trueBody {
@@ -404,8 +404,8 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 				counts[k] = v
 			}
 
-			for _, st := range stmt.body.trueBody {
-				st.countVarRefs(counts, true)
+			for _, st := range stmt.body.falseBody {
+				st.countVarRefs(counts, false)
 			}
 
 			stk = condStk

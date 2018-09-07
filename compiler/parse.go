@@ -157,14 +157,8 @@ func parseStatement(p *parser) statement {
 
 func parseIfStmt(p *parser) *ifStatement {
 	consumeKeyword(p, "if")
-	expr := parseExpr(p)
-	ifstat := &ifStatement{condition: expr}
-	ifstat.body = parseIfBody(p)
-	return ifstat
-}
-
-func parseIfBody(p *parser) *IfStatmentBody {
-	var body IfStatmentBody
+	condition := parseExpr(p)
+	body := &IfStatmentBody{}
 	consumeTok(p, "{")
 	body.trueBody = parseStatements(p)
 	consumeTok(p, "}")
@@ -174,7 +168,7 @@ func parseIfBody(p *parser) *IfStatmentBody {
 		body.falseBody = parseStatements(p)
 		consumeTok(p, "}")
 	}
-	return &body
+	return &ifStatement{condition: condition, body: body}
 }
 
 func parseDefineStmt(p *parser) *defineStatement {

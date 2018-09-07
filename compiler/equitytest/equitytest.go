@@ -118,3 +118,29 @@ contract TestIfAndMultiClause(a: Integer, cancelKey: PublicKey) locks valueAmoun
   }
 }
 `
+
+const TestIfRecursive = `
+contract TestIfRecursive(a: Integer, count:Integer) locks valueAmount of valueAsset {
+  clause check(b: Integer, c: Integer, d: Integer) {
+    verify b != count
+    if a > b {
+        if d > c {
+           verify a > d
+        }
+        verify d != b
+    } else {
+        verify a > c
+    }
+    verify c != count
+    unlock valueAmount of valueAsset
+  }
+  clause cancel(e: Integer, f: Integer) {
+    verify a != e
+    if a > f {
+      verify e > count
+    }
+    verify f != count
+    unlock valueAmount of valueAsset
+  }
+}
+`

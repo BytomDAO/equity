@@ -220,9 +220,10 @@ func compileContract(contract *Contract, globalEnv *environ) error {
 	}
 
 	b := &builder{}
+	sequence := 0 // sequence is used to count the number of ifStatements
 
 	if len(contract.Clauses) == 1 {
-		err = compileClause(b, stk, contract, env, contract.Clauses[0])
+		err = compileClause(b, stk, contract, env, contract.Clauses[0], &sequence)
 		if err != nil {
 			return err
 		}
@@ -266,7 +267,7 @@ func compileContract(contract *Contract, globalEnv *environ) error {
 				stk = b.addDrop(stk)
 			}
 
-			err = compileClause(b, stk, contract, env, clause)
+			err = compileClause(b, stk, contract, env, clause, &sequence)
 			if err != nil {
 				return errors.Wrapf(err, "compiling clause \"%s\"", clause.Name)
 			}
@@ -292,7 +293,7 @@ func compileContract(contract *Contract, globalEnv *environ) error {
 	return nil
 }
 
-func compileClause(b *builder, contractStk stack, contract *Contract, env *environ, clause *Clause) error {
+func compileClause(b *builder, contractStk stack, contract *Contract, env *environ, clause *Clause, sequence *int) error {
 	var err error
 
 	// copy env to leave outerEnv unchanged
@@ -330,7 +331,7 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	}
 
 	for _, stat := range clause.statements {
-		if stk, err = compileStatement(b, stk, contract, env, clause, counts, stat); err != nil {
+		if stk, err = compileStatement(b, stk, contract, env, clause, counts, stat, sequence); err != nil {
 			return err
 		}
 	}
@@ -351,10 +352,14 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	return nil
 }
 
-func compileStatement(b *builder, stk stack, contract *Contract, env *environ, clause *Clause, counts map[string]int, stat statement) (stack, error) {
+func compileStatement(b *builder, stk stack, contract *Contract, env *environ, clause *Clause, counts map[string]int, stat statement, sequence *int) (stack, error) {
 	var err error
 	switch stmt := stat.(type) {
 	case *ifStatement:
+		// sequence add 1 when the statement is ifStatement
+		*sequence++
+		strSequence := fmt.Sprintf("%d", *sequence)
+
 		// compile condition expression
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.condition)
 		if err != nil {
@@ -370,12 +375,12 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		// add label
 		var label string
 		if len(stmt.body.falseBody) != 0 {
-			label = "else"
+			label = "else_" + strSequence
 		} else {
-			label = "endif"
+			label = "endif_" + strSequence
 		}
 		stk = b.addJumpIf(stk, label)
-		b.addJumpTarget(stk, "if")
+		b.addJumpTarget(stk, "if_"+strSequence)
 
 		// temporary store stack and counts for falseBody
 		condStk := stk
@@ -391,7 +396,7 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			}
 
 			for _, st := range stmt.body.trueBody {
-				if stk, err = compileStatement(b, stk, contract, env, clause, counts, st); err != nil {
+				if stk, err = compileStatement(b, stk, contract, env, clause, counts, st, sequence); err != nil {
 					return stk, err
 				}
 			}
@@ -409,16 +414,16 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			}
 
 			stk = condStk
-			b.addJump(stk, "endif")
-			b.addJumpTarget(stk, "else")
+			b.addJump(stk, "endif_"+strSequence)
+			b.addJumpTarget(stk, "else_"+strSequence)
 
 			for _, st := range stmt.body.falseBody {
-				if stk, err = compileStatement(b, stk, contract, env, clause, counts, st); err != nil {
+				if stk, err = compileStatement(b, stk, contract, env, clause, counts, st, sequence); err != nil {
 					return stk, err
 				}
 			}
 		}
-		b.addJumpTarget(stk, "endif")
+		b.addJumpTarget(stk, "endif_"+strSequence)
 
 	case *defineStatement:
 		// variable

@@ -100,7 +100,7 @@ type IfStatmentBody struct {
 }
 
 type statement interface {
-	countVarRefs(map[string]int, bool)
+	countVarRefs(map[string]int)
 }
 
 type defineStatement struct {
@@ -108,8 +108,8 @@ type defineStatement struct {
 	expr    expression
 }
 
-func (s defineStatement) countVarRefs(counts map[string]int, flag bool) {
-	s.expr.countVarRefs(counts, flag)
+func (s defineStatement) countVarRefs(counts map[string]int) {
+	s.expr.countVarRefs(counts)
 }
 
 type ifStatement struct {
@@ -117,16 +117,16 @@ type ifStatement struct {
 	body      *IfStatmentBody
 }
 
-func (s ifStatement) countVarRefs(counts map[string]int, flag bool) {
-	s.condition.countVarRefs(counts, flag)
+func (s ifStatement) countVarRefs(counts map[string]int) {
+	s.condition.countVarRefs(counts)
 }
 
 type verifyStatement struct {
 	expr expression
 }
 
-func (s verifyStatement) countVarRefs(counts map[string]int, flag bool) {
-	s.expr.countVarRefs(counts, flag)
+func (s verifyStatement) countVarRefs(counts map[string]int) {
+	s.expr.countVarRefs(counts)
 }
 
 type lockStatement struct {
@@ -138,10 +138,10 @@ type lockStatement struct {
 	index int64
 }
 
-func (s lockStatement) countVarRefs(counts map[string]int, flag bool) {
-	s.lockedAmount.countVarRefs(counts, flag)
-	s.lockedAsset.countVarRefs(counts, flag)
-	s.program.countVarRefs(counts, flag)
+func (s lockStatement) countVarRefs(counts map[string]int) {
+	s.lockedAmount.countVarRefs(counts)
+	s.lockedAsset.countVarRefs(counts)
+	s.program.countVarRefs(counts)
 }
 
 type unlockStatement struct {
@@ -149,15 +149,15 @@ type unlockStatement struct {
 	unlockedAsset  expression
 }
 
-func (s unlockStatement) countVarRefs(counts map[string]int, flag bool) {
-	s.unlockedAmount.countVarRefs(counts, flag)
-	s.unlockedAsset.countVarRefs(counts, flag)
+func (s unlockStatement) countVarRefs(counts map[string]int) {
+	s.unlockedAmount.countVarRefs(counts)
+	s.unlockedAsset.countVarRefs(counts)
 }
 
 type expression interface {
 	String() string
 	typ(*environ) typeDesc
-	countVarRefs(map[string]int, bool)
+	countVarRefs(map[string]int)
 }
 
 type binaryExpr struct {
@@ -173,9 +173,9 @@ func (e binaryExpr) typ(*environ) typeDesc {
 	return e.op.result
 }
 
-func (e binaryExpr) countVarRefs(counts map[string]int, flag bool) {
-	e.left.countVarRefs(counts, flag)
-	e.right.countVarRefs(counts, flag)
+func (e binaryExpr) countVarRefs(counts map[string]int) {
+	e.left.countVarRefs(counts)
+	e.right.countVarRefs(counts)
 }
 
 type unaryExpr struct {
@@ -191,8 +191,8 @@ func (e unaryExpr) typ(*environ) typeDesc {
 	return e.op.result
 }
 
-func (e unaryExpr) countVarRefs(counts map[string]int, flag bool) {
-	e.expr.countVarRefs(counts, flag)
+func (e unaryExpr) countVarRefs(counts map[string]int) {
+	e.expr.countVarRefs(counts)
 }
 
 type callExpr struct {
@@ -243,10 +243,10 @@ func (e callExpr) typ(env *environ) typeDesc {
 	return nilType
 }
 
-func (e callExpr) countVarRefs(counts map[string]int, flag bool) {
-	e.fn.countVarRefs(counts, flag)
+func (e callExpr) countVarRefs(counts map[string]int) {
+	e.fn.countVarRefs(counts)
 	for _, a := range e.args {
-		a.countVarRefs(counts, flag)
+		a.countVarRefs(counts)
 	}
 }
 
@@ -263,15 +263,8 @@ func (e varRef) typ(env *environ) typeDesc {
 	return nilType
 }
 
-func (e varRef) countVarRefs(counts map[string]int, flag bool) {
-	if flag {
-		counts[string(e)]--
-		if counts[string(e)] < 0 {
-			panic("the count of used variable is less than 0")
-		}
-	} else {
-		counts[string(e)]++
-	}
+func (e varRef) countVarRefs(counts map[string]int) {
+	counts[string(e)]++
 }
 
 type bytesLiteral []byte
@@ -284,7 +277,7 @@ func (bytesLiteral) typ(*environ) typeDesc {
 	return "String"
 }
 
-func (bytesLiteral) countVarRefs(map[string]int, bool) {}
+func (bytesLiteral) countVarRefs(map[string]int) {}
 
 type integerLiteral int64
 
@@ -296,7 +289,7 @@ func (integerLiteral) typ(*environ) typeDesc {
 	return "Integer"
 }
 
-func (integerLiteral) countVarRefs(map[string]int, bool) {}
+func (integerLiteral) countVarRefs(map[string]int) {}
 
 type booleanLiteral bool
 
@@ -311,7 +304,7 @@ func (booleanLiteral) typ(*environ) typeDesc {
 	return "Boolean"
 }
 
-func (booleanLiteral) countVarRefs(map[string]int, bool) {}
+func (booleanLiteral) countVarRefs(map[string]int) {}
 
 type listExpr []expression
 
@@ -327,8 +320,8 @@ func (listExpr) typ(*environ) typeDesc {
 	return "List"
 }
 
-func (e listExpr) countVarRefs(counts map[string]int, flag bool) {
+func (e listExpr) countVarRefs(counts map[string]int) {
 	for _, elt := range e {
-		elt.countVarRefs(counts, flag)
+		elt.countVarRefs(counts)
 	}
 }

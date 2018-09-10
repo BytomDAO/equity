@@ -318,14 +318,14 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	// a count of the number of times each variable is referenced
 	counts := make(map[string]int)
 	for _, s := range clause.statements {
-		s.countVarRefs(counts, false)
+		s.countVarRefs(counts)
 		if stmt, ok := s.(*ifStatement); ok {
 			for _, trueStmt := range stmt.body.trueBody {
-				trueStmt.countVarRefs(counts, false)
+				trueStmt.countVarRefs(counts)
 			}
 
 			for _, falseStmt := range stmt.body.falseBody {
-				falseStmt.countVarRefs(counts, false)
+				falseStmt.countVarRefs(counts)
 			}
 		}
 	}
@@ -392,7 +392,7 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		// compile trueBody statements
 		if len(stmt.body.trueBody) != 0 {
 			for _, st := range stmt.body.trueBody {
-				st.countVarRefs(counts, false)
+				st.countVarRefs(counts)
 			}
 
 			for _, st := range stmt.body.trueBody {
@@ -410,7 +410,7 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			}
 
 			for _, st := range stmt.body.falseBody {
-				st.countVarRefs(counts, false)
+				st.countVarRefs(counts)
 			}
 
 			stk = condStk

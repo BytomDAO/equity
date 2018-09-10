@@ -89,3 +89,58 @@ contract TestDefineVar(result: Integer) locks valueAmount of valueAsset {
   }
 }
 `
+
+const TestSigIf = `
+contract TestSigIf(a: Integer, count:Integer) locks valueAmount of valueAsset {
+  clause check(b: Integer, c: Integer) {
+    verify b != count
+    if a > b {
+        verify b > c
+    } else {
+        verify a > c
+    }
+    unlock valueAmount of valueAsset
+  }
+}
+`
+const TestIfAndMultiClause = `
+contract TestIfAndMultiClause(a: Integer, cancelKey: PublicKey) locks valueAmount of valueAsset {
+  clause check(b: Integer, c: Integer) {
+    verify b != c
+    if a > b {
+        verify a > c
+    }
+    unlock valueAmount of valueAsset
+  }
+  clause cancel(sellerSig: Signature) {
+    verify checkTxSig(cancelKey, sellerSig)
+    unlock valueAmount of valueAsset
+  }
+}
+`
+
+const TestIfRecursive = `
+contract TestIfRecursive(a: Integer, count:Integer) locks valueAmount of valueAsset {
+  clause check(b: Integer, c: Integer, d: Integer) {
+    verify b != count
+    if a > b {
+        if d > c {
+           verify a > d
+        }
+        verify d != b
+    } else {
+        verify a > c
+    }
+    verify c != count
+    unlock valueAmount of valueAsset
+  }
+  clause cancel(e: Integer, f: Integer) {
+    verify a != e
+    if a > f {
+      verify e > count
+    }
+    verify f != count
+    unlock valueAmount of valueAsset
+  }
+}
+`

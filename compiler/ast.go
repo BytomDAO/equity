@@ -90,18 +90,13 @@ type HashCall struct {
 	ArgType string `json:"arg_type"`
 }
 
-// ClauseReq describes a payment requirement of a clause (one of the
-// things after the "requires" keyword).
-type ClauseReq struct {
-	Name string `json:"name"`
+// IfBody describes a if ... else ... struct
+type IfStatmentBody struct {
+	// if statements body
+	trueBody []statement
 
-	assetExpr, amountExpr expression
-
-	// Asset is the expression describing the required asset.
-	Asset string `json:"asset"`
-
-	// Amount is the expression describing the required amount.
-	Amount string `json:"amount"`
+	// else statements body
+	falseBody []statement
 }
 
 type statement interface {
@@ -115,6 +110,15 @@ type defineStatement struct {
 
 func (s defineStatement) countVarRefs(counts map[string]int) {
 	s.expr.countVarRefs(counts)
+}
+
+type ifStatement struct {
+	condition expression
+	body      *IfStatmentBody
+}
+
+func (s ifStatement) countVarRefs(counts map[string]int) {
+	s.condition.countVarRefs(counts)
 }
 
 type verifyStatement struct {

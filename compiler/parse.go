@@ -141,6 +141,8 @@ func parseStatements(p *parser) []statement {
 
 func parseStatement(p *parser) statement {
 	switch peekKeyword(p) {
+	case "if":
+		return parseIfStmt(p)
 	case "define":
 		return parseDefineStmt(p)
 	case "verify":
@@ -151,6 +153,22 @@ func parseStatement(p *parser) statement {
 		return parseUnlockStmt(p)
 	}
 	panic(parseErr(p.buf, p.pos, "unknown keyword \"%s\"", peekKeyword(p)))
+}
+
+func parseIfStmt(p *parser) *ifStatement {
+	consumeKeyword(p, "if")
+	condition := parseExpr(p)
+	body := &IfStatmentBody{}
+	consumeTok(p, "{")
+	body.trueBody = parseStatements(p)
+	consumeTok(p, "}")
+	if peekKeyword(p) == "else" {
+		consumeKeyword(p, "else")
+		consumeTok(p, "{")
+		body.falseBody = parseStatements(p)
+		consumeTok(p, "}")
+	}
+	return &ifStatement{condition: condition, body: body}
 }
 
 func parseDefineStmt(p *parser) *defineStatement {

@@ -476,24 +476,36 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			stk = b.addAmount(stk, contract.Value.Amount)
 			stk = b.addAsset(stk, contract.Value.Asset)
 		} else {
-			if strings.Contains(stmt.lockedAmount.String(), contract.Value.Amount) {
-				stk = b.addAmount(stk, contract.Value.Amount)
-			}
-
-			if strings.Contains(stmt.lockedAsset.String(), contract.Value.Asset) {
-				stk = b.addAsset(stk, contract.Value.Asset)
-			}
-
 			// amount
-			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAmount)
-			if err != nil {
-				return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+			if stmt.lockedAmount.String() == contract.Value.Amount {
+				stk = b.addAmount(stk, contract.Value.Amount)
+			} else if strings.Contains(stmt.lockedAmount.String(), contract.Value.Amount) {
+				stk = b.addAmount(stk, contract.Value.Amount)
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAmount)
+				if err != nil {
+					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				}
+			} else {
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAmount)
+				if err != nil {
+					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				}
 			}
 
 			// asset
-			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAsset)
-			if err != nil {
-				return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+			if stmt.lockedAsset.String() == contract.Value.Asset {
+				stk = b.addAsset(stk, contract.Value.Asset)
+			} else if strings.Contains(stmt.lockedAsset.String(), contract.Value.Asset) {
+				stk = b.addAsset(stk, contract.Value.Asset)
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAsset)
+				if err != nil {
+					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				}
+			} else {
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAsset)
+				if err != nil {
+					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				}
 			}
 		}
 

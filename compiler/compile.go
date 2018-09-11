@@ -433,7 +433,7 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		}
 
 		// check variable type
-		if stmt.expr.typ(env) != stmt.varName.Type {
+		if stmt.expr.typ(env) != stmt.varName.Type && !isHashSubtype(stmt.expr.typ(env)) {
 			return stk, fmt.Errorf("expression in define statement in clause \"%s\" has type \"%s\", must be \"%s\"",
 				clause.Name, stmt.expr.typ(env), stmt.varName.Type)
 		}

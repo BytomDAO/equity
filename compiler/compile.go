@@ -395,6 +395,16 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 				st.countVarRefs(counts)
 			}
 
+			// modify value amount because of using only once
+			if counts[contract.Value.Amount] > 1 {
+				counts[contract.Value.Amount] = 1
+			}
+
+			// modify value asset because of using only once
+			if counts[contract.Value.Asset] > 1 {
+				counts[contract.Value.Asset] = 1
+			}
+
 			for _, st := range stmt.body.trueBody {
 				if stk, err = compileStatement(b, stk, contract, env, clause, counts, st, sequence); err != nil {
 					return stk, err
@@ -411,6 +421,16 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 
 			for _, st := range stmt.body.falseBody {
 				st.countVarRefs(counts)
+			}
+
+			// modify value amount because of using only once
+			if counts[contract.Value.Amount] > 1 {
+				counts[contract.Value.Amount] = 1
+			}
+
+			// modify value asset because of using only once
+			if counts[contract.Value.Asset] > 1 {
+				counts[contract.Value.Asset] = 1
 			}
 
 			stk = condStk

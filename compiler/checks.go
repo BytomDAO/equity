@@ -5,15 +5,37 @@ import "fmt"
 func checkRecursive(contract *Contract) bool {
 	for _, clause := range contract.Clauses {
 		for _, stmt := range clause.statements {
-			if l, ok := stmt.(*lockStatement); ok {
-				if c, ok := l.program.(*callExpr); ok {
-					if references(c.fn, contract.Name) {
-						return true
-					}
-				}
+			if result := checkStatRecursive(stmt, contract.Name); result {
+				return true
 			}
 		}
 	}
+	return false
+}
+
+func checkStatRecursive(stmt statement, contractName string) bool {
+	switch s := stmt.(type) {
+	case *ifStatement:
+		for _, trueStmt := range s.body.trueBody {
+			if result := checkStatRecursive(trueStmt, contractName); result {
+				return true
+			}
+		}
+
+		for _, falseStmt := range s.body.falseBody {
+			if result := checkStatRecursive(falseStmt, contractName); result {
+				return true
+			}
+		}
+
+	case *lockStatement:
+		if c, ok := s.program.(*callExpr); ok {
+			if references(c.fn, contractName) {
+				return true
+			}
+		}
+	}
+
 	return false
 }
 
@@ -133,17 +155,8 @@ func requireAllValuesDisposedOnce(contract *Contract, clause *Clause) error {
 
 func valueDisposedOnce(value ValueInfo, clause *Clause) error {
 	var count int
-	for _, s := range clause.statements {
-		switch stmt := s.(type) {
-		case *unlockStatement:
-			if references(stmt.unlockedAmount, value.Amount) && references(stmt.unlockedAsset, value.Asset) {
-				count++
-			}
-		case *lockStatement:
-			if references(stmt.lockedAmount, value.Amount) && references(stmt.lockedAsset, value.Asset) {
-				count++
-			}
-		}
+	for _, stmt := range clause.statements {
+		count = valueDisposedCount(value, stmt)
 	}
 	switch count {
 	case 0:
@@ -153,6 +166,30 @@ func valueDisposedOnce(value ValueInfo, clause *Clause) error {
 	default:
 		return fmt.Errorf("valueAmount \"%s\" or valueAsset \"%s\" disposed multiple times in clause \"%s\"", value.Amount, value.Asset, clause.Name)
 	}
+}
+
+func valueDisposedCount(value ValueInfo, stat statement) (count int) {
+	switch stmt := stat.(type) {
+	case *ifStatement:
+		for _, trueStmt := range stmt.body.trueBody {
+			count = valueDisposedCount(value, trueStmt)
+		}
+
+		for _, falseStmt := range stmt.body.falseBody {
+			count = valueDisposedCount(value, falseStmt)
+		}
+
+	case *unlockStatement:
+		if references(stmt.unlockedAmount, value.Amount) && references(stmt.unlockedAsset, value.Asset) {
+			count++
+		}
+	case *lockStatement:
+		if references(stmt.lockedAmount, value.Amount) && references(stmt.lockedAsset, value.Asset) {
+			count++
+		}
+	}
+
+	return
 }
 
 func referencedBuiltin(expr expression) *builtin {

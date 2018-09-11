@@ -156,9 +156,12 @@ func requireAllValuesDisposedOnce(contract *Contract, clause *Clause) error {
 func valueDisposedOnce(value ValueInfo, clause *Clause) error {
 	var count int
 	for _, stmt := range clause.statements {
-		count = valueDisposedCount(value, stmt)
+		count = valueDisposedCount(value, stmt, count)
 	}
 	switch count {
+	case -1:
+		return fmt.Errorf("valueAmount \"%s\" and valueAsset \"%s\" used times is not equal between if and else statement in clause \"%s\"",
+			value.Amount, value.Asset, clause.Name)
 	case 0:
 		return fmt.Errorf("valueAmount \"%s\" or valueAsset \"%s\" not disposed in clause \"%s\"", value.Amount, value.Asset, clause.Name)
 	case 1:
@@ -168,16 +171,23 @@ func valueDisposedOnce(value ValueInfo, clause *Clause) error {
 	}
 }
 
-func valueDisposedCount(value ValueInfo, stat statement) (count int) {
+func valueDisposedCount(value ValueInfo, stat statement, count int) int {
 	switch stmt := stat.(type) {
 	case *ifStatement:
+		var trueCount int
+		var falseCount int
 		for _, trueStmt := range stmt.body.trueBody {
-			count = valueDisposedCount(value, trueStmt)
+			trueCount = valueDisposedCount(value, trueStmt, count)
 		}
 
 		for _, falseStmt := range stmt.body.falseBody {
-			count = valueDisposedCount(value, falseStmt)
+			falseCount = valueDisposedCount(value, falseStmt, count)
 		}
+
+		if trueCount != falseCount {
+			return -1
+		}
+		count = trueCount
 
 	case *unlockStatement:
 		if references(stmt.unlockedAmount, value.Amount) && references(stmt.unlockedAsset, value.Asset) {
@@ -189,7 +199,7 @@ func valueDisposedCount(value ValueInfo, stat statement) (count int) {
 		}
 	}
 
-	return
+	return count
 }
 
 func referencedBuiltin(expr expression) *builtin {

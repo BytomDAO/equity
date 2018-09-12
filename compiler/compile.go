@@ -304,7 +304,10 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			return err
 		}
 	}
-	assignIndexes(clause)
+
+	if err = assignIndexes(clause); err != nil {
+		return err
+	}
 
 	var stk stack
 	for _, p := range clause.Params {

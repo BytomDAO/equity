@@ -213,22 +213,34 @@ func referencedBuiltin(expr expression) *builtin {
 	return nil
 }
 
-func assignIndexes(clause *Clause) {
+func assignIndexes(clause *Clause) error {
 	var nextIndex int64
-	for _, stmt := range clause.statements {
-		nextIndex = assignStatIndexes(stmt, nextIndex)
+	for i, stmt := range clause.statements {
+		if nextIndex = assignStatIndexes(stmt, nextIndex, i != len(clause.statements)-1); nextIndex < 0 {
+			return fmt.Errorf("Not support that the number of lock/unlock statement is not equal between ifbody and elsebody when the if-else is not the last statement in clause \"%s\"", clause.Name)
+		}
 	}
+
+	return nil
 }
 
-func assignStatIndexes(stat statement, nextIndex int64) int64 {
+func assignStatIndexes(stat statement, nextIndex int64, nonFinalFlag bool) int64 {
 	switch stmt := stat.(type) {
 	case *ifStatement:
+		trueIndex := nextIndex
+		falseIndex := nextIndex
 		for _, trueStmt := range stmt.body.trueBody {
-			nextIndex = assignStatIndexes(trueStmt, nextIndex)
+			trueIndex = assignStatIndexes(trueStmt, trueIndex, nonFinalFlag)
 		}
 
 		for _, falseStmt := range stmt.body.falseBody {
-			nextIndex = assignStatIndexes(falseStmt, nextIndex)
+			falseIndex = assignStatIndexes(falseStmt, falseIndex, nonFinalFlag)
+		}
+
+		if trueIndex != falseIndex && nonFinalFlag {
+			return -1
+		} else if trueIndex == falseIndex {
+			nextIndex = trueIndex
 		}
 
 	case *lockStatement:

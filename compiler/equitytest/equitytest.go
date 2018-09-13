@@ -119,8 +119,8 @@ contract TestIfAndMultiClause(a: Integer, cancelKey: PublicKey) locks valueAmoun
 }
 `
 
-const TestIfRecursive = `
-contract TestIfRecursive(a: Integer, count:Integer) locks valueAmount of valueAsset {
+const TestIfNesting = `
+contract TestIfNesting(a: Integer, count:Integer) locks valueAmount of valueAsset {
   clause check(b: Integer, c: Integer, d: Integer) {
     verify b != count
     if a > b {

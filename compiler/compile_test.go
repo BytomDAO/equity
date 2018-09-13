@@ -57,6 +57,11 @@ func TestCompile(t *testing.T) {
 			"7caa87",
 		},
 		{
+			"PriceChanger",
+			equitytest.PriceChanger,
+			"557a6432000000557a5479ae7cac6900c3c25100597a89587a89587a89587a89557a890274787e008901c07ec1633a000000007b537a51567ac1",
+		},
+		{
 			"TestDefineVar",
 			equitytest.TestDefineVar,
 			"52797b937b7887916987",

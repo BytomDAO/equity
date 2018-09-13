@@ -78,6 +78,18 @@ contract RevealPreimage(hash: Hash) locks amount of asset {
   }
 }
 `
+const PriceChanger = `
+contract PriceChanger(askAmount: Amount, askAsset: Asset, sellerKey: PublicKey, sellerProg: Program) locks valueAmount of valueAsset {
+  clause changePrice(newAmount: Amount, newAsset: Asset, sig: Signature) {
+    verify checkTxSig(sellerKey, sig)
+    lock valueAmount of valueAsset with PriceChanger(newAmount, newAsset, sellerKey, sellerProg)
+  }
+  clause redeem() {
+    lock askAmount of askAsset with sellerProg
+    unlock valueAmount of valueAsset
+  }
+}
+`
 
 const TestDefineVar = `
 contract TestDefineVar(result: Integer) locks valueAmount of valueAsset {
@@ -119,8 +131,8 @@ contract TestIfAndMultiClause(a: Integer, cancelKey: PublicKey) locks valueAmoun
 }
 `
 
-const TestIfRecursive = `
-contract TestIfRecursive(a: Integer, count:Integer) locks valueAmount of valueAsset {
+const TestIfNesting = `
+contract TestIfNesting(a: Integer, count:Integer) locks valueAmount of valueAsset {
   clause check(b: Integer, c: Integer, d: Integer) {
     verify b != count
     if a > b {

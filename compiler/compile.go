@@ -304,7 +304,10 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			return err
 		}
 	}
-	assignIndexes(clause)
+
+	if err = assignIndexes(clause); err != nil {
+		return err
+	}
 
 	var stk stack
 	for _, p := range clause.Params {
@@ -395,6 +398,16 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 				st.countVarRefs(counts)
 			}
 
+			// modify value amount because of using only once
+			if counts[contract.Value.Amount] > 1 {
+				counts[contract.Value.Amount] = 1
+			}
+
+			// modify value asset because of using only once
+			if counts[contract.Value.Asset] > 1 {
+				counts[contract.Value.Asset] = 1
+			}
+
 			for _, st := range stmt.body.trueBody {
 				if stk, err = compileStatement(b, stk, contract, env, clause, counts, st, sequence); err != nil {
 					return stk, err
@@ -411,6 +424,16 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 
 			for _, st := range stmt.body.falseBody {
 				st.countVarRefs(counts)
+			}
+
+			// modify value amount because of using only once
+			if counts[contract.Value.Amount] > 1 {
+				counts[contract.Value.Amount] = 1
+			}
+
+			// modify value asset because of using only once
+			if counts[contract.Value.Asset] > 1 {
+				counts[contract.Value.Asset] = 1
 			}
 
 			stk = condStk
@@ -430,12 +453,6 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
 		if err != nil {
 			return stk, errors.Wrapf(err, "in define statement in clause \"%s\"", clause.Name)
-		}
-
-		// check variable type
-		if stmt.expr.typ(env) != stmt.varName.Type {
-			return stk, fmt.Errorf("expression in define statement in clause \"%s\" has type \"%s\", must be \"%s\"",
-				clause.Name, stmt.expr.typ(env), stmt.varName.Type)
 		}
 
 		// modify stack name
@@ -476,24 +493,36 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			stk = b.addAmount(stk, contract.Value.Amount)
 			stk = b.addAsset(stk, contract.Value.Asset)
 		} else {
-			if strings.Contains(stmt.lockedAmount.String(), contract.Value.Amount) {
-				stk = b.addAmount(stk, contract.Value.Amount)
-			}
-
-			if strings.Contains(stmt.lockedAsset.String(), contract.Value.Asset) {
-				stk = b.addAsset(stk, contract.Value.Asset)
-			}
-
 			// amount
-			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAmount)
-			if err != nil {
-				return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+			if stmt.lockedAmount.String() == contract.Value.Amount {
+				stk = b.addAmount(stk, contract.Value.Amount)
+			} else if strings.Contains(stmt.lockedAmount.String(), contract.Value.Amount) {
+				stk = b.addAmount(stk, contract.Value.Amount)
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAmount)
+				if err != nil {
+					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				}
+			} else {
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAmount)
+				if err != nil {
+					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				}
 			}
 
 			// asset
-			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAsset)
-			if err != nil {
-				return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+			if stmt.lockedAsset.String() == contract.Value.Asset {
+				stk = b.addAsset(stk, contract.Value.Asset)
+			} else if strings.Contains(stmt.lockedAsset.String(), contract.Value.Asset) {
+				stk = b.addAsset(stk, contract.Value.Asset)
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAsset)
+				if err != nil {
+					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				}
+			} else {
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAsset)
+				if err != nil {
+					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				}
 			}
 		}
 

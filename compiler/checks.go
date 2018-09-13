@@ -5,15 +5,37 @@ import "fmt"
 func checkRecursive(contract *Contract) bool {
 	for _, clause := range contract.Clauses {
 		for _, stmt := range clause.statements {
-			if l, ok := stmt.(*lockStatement); ok {
-				if c, ok := l.program.(*callExpr); ok {
-					if references(c.fn, contract.Name) {
-						return true
-					}
-				}
+			if result := checkStatRecursive(stmt, contract.Name); result {
+				return true
 			}
 		}
 	}
+	return false
+}
+
+func checkStatRecursive(stmt statement, contractName string) bool {
+	switch s := stmt.(type) {
+	case *ifStatement:
+		for _, trueStmt := range s.body.trueBody {
+			if result := checkStatRecursive(trueStmt, contractName); result {
+				return true
+			}
+		}
+
+		for _, falseStmt := range s.body.falseBody {
+			if result := checkStatRecursive(falseStmt, contractName); result {
+				return true
+			}
+		}
+
+	case *lockStatement:
+		if c, ok := s.program.(*callExpr); ok {
+			if references(c.fn, contractName) {
+				return true
+			}
+		}
+	}
+
 	return false
 }
 
@@ -133,19 +155,13 @@ func requireAllValuesDisposedOnce(contract *Contract, clause *Clause) error {
 
 func valueDisposedOnce(value ValueInfo, clause *Clause) error {
 	var count int
-	for _, s := range clause.statements {
-		switch stmt := s.(type) {
-		case *unlockStatement:
-			if references(stmt.unlockedAmount, value.Amount) && references(stmt.unlockedAsset, value.Asset) {
-				count++
-			}
-		case *lockStatement:
-			if references(stmt.lockedAmount, value.Amount) && references(stmt.lockedAsset, value.Asset) {
-				count++
-			}
-		}
+	for _, stmt := range clause.statements {
+		count = valueDisposedCount(value, stmt, count)
 	}
 	switch count {
+	case -1:
+		return fmt.Errorf("valueAmount \"%s\" and valueAsset \"%s\" used times is not equal between if and else statement in clause \"%s\"",
+			value.Amount, value.Asset, clause.Name)
 	case 0:
 		return fmt.Errorf("valueAmount \"%s\" or valueAsset \"%s\" not disposed in clause \"%s\"", value.Amount, value.Asset, clause.Name)
 	case 1:
@@ -153,6 +169,37 @@ func valueDisposedOnce(value ValueInfo, clause *Clause) error {
 	default:
 		return fmt.Errorf("valueAmount \"%s\" or valueAsset \"%s\" disposed multiple times in clause \"%s\"", value.Amount, value.Asset, clause.Name)
 	}
+}
+
+func valueDisposedCount(value ValueInfo, stat statement, count int) int {
+	switch stmt := stat.(type) {
+	case *ifStatement:
+		var trueCount int
+		var falseCount int
+		for _, trueStmt := range stmt.body.trueBody {
+			trueCount = valueDisposedCount(value, trueStmt, count)
+		}
+
+		for _, falseStmt := range stmt.body.falseBody {
+			falseCount = valueDisposedCount(value, falseStmt, count)
+		}
+
+		if trueCount != falseCount {
+			return -1
+		}
+		count = trueCount
+
+	case *unlockStatement:
+		if references(stmt.unlockedAmount, value.Amount) && references(stmt.unlockedAsset, value.Asset) {
+			count++
+		}
+	case *lockStatement:
+		if references(stmt.lockedAmount, value.Amount) && references(stmt.lockedAsset, value.Asset) {
+			count++
+		}
+	}
+
+	return count
 }
 
 func referencedBuiltin(expr expression) *builtin {
@@ -166,51 +213,105 @@ func referencedBuiltin(expr expression) *builtin {
 	return nil
 }
 
-func assignIndexes(clause *Clause) {
+func assignIndexes(clause *Clause) error {
 	var nextIndex int64
-	for _, s := range clause.statements {
-		switch stmt := s.(type) {
-		case *lockStatement:
-			stmt.index = nextIndex
-			nextIndex++
-
-		case *unlockStatement:
-			nextIndex++
+	for i, stmt := range clause.statements {
+		if nextIndex = assignStatIndexes(stmt, nextIndex, i != len(clause.statements)-1); nextIndex < 0 {
+			return fmt.Errorf("Not support that the number of lock/unlock statement is not equal between ifbody and elsebody when the if-else is not the last statement in clause \"%s\"", clause.Name)
 		}
 	}
+
+	return nil
+}
+
+func assignStatIndexes(stat statement, nextIndex int64, nonFinalFlag bool) int64 {
+	switch stmt := stat.(type) {
+	case *ifStatement:
+		trueIndex := nextIndex
+		falseIndex := nextIndex
+		for _, trueStmt := range stmt.body.trueBody {
+			trueIndex = assignStatIndexes(trueStmt, trueIndex, nonFinalFlag)
+		}
+
+		for _, falseStmt := range stmt.body.falseBody {
+			falseIndex = assignStatIndexes(falseStmt, falseIndex, nonFinalFlag)
+		}
+
+		if trueIndex != falseIndex && nonFinalFlag {
+			return -1
+		} else if trueIndex == falseIndex {
+			nextIndex = trueIndex
+		}
+
+	case *lockStatement:
+		stmt.index = nextIndex
+		nextIndex++
+
+	case *unlockStatement:
+		nextIndex++
+	}
+
+	return nextIndex
 }
 
 func typeCheckClause(contract *Contract, clause *Clause, env *environ) error {
 	for _, s := range clause.statements {
-		switch stmt := s.(type) {
-		case *verifyStatement:
-			if t := stmt.expr.typ(env); t != boolType {
-				return fmt.Errorf("expression in verify statement in clause \"%s\" has type \"%s\", must be Boolean", clause.Name, t)
-			}
-
-		case *lockStatement:
-			if t := stmt.lockedAmount.typ(env); !(t == intType || t == amountType) {
-				return fmt.Errorf("lockedAmount expression \"%s\" in lock statement in clause \"%s\" has type \"%s\", must be Integer", stmt.lockedAmount, clause.Name, t)
-			}
-			if t := stmt.lockedAsset.typ(env); t != assetType {
-				return fmt.Errorf("lockedAsset expression \"%s\" in lock statement in clause \"%s\" has type \"%s\", must be Asset", stmt.lockedAsset, clause.Name, t)
-			}
-			if t := stmt.program.typ(env); t != progType {
-				return fmt.Errorf("program in lock statement in clause \"%s\" has type \"%s\", must be Program", clause.Name, t)
-			}
-
-		case *unlockStatement:
-			if t := stmt.unlockedAmount.typ(env); !(t == intType || t == amountType) {
-				return fmt.Errorf("unlockedAmount expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Integer", stmt.unlockedAmount, clause.Name, t)
-			}
-			if t := stmt.unlockedAsset.typ(env); t != assetType {
-				return fmt.Errorf("unlockedAsset expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Asset", stmt.unlockedAsset, clause.Name, t)
-			}
-			if stmt.unlockedAmount.String() != contract.Value.Amount || stmt.unlockedAsset.String() != contract.Value.Asset {
-				return fmt.Errorf("amount \"%s\" of asset \"%s\" expression in unlock statement of clause \"%s\" must be the contract valueAmount \"%s\" of valueAsset \"%s\"",
-					stmt.unlockedAmount.String(), stmt.unlockedAsset.String(), clause.Name, contract.Value.Amount, contract.Value.Asset)
-			}
+		if err := typeCheckStatement(s, contract.Value, clause.Name, env); err != nil {
+			return err
 		}
 	}
+	return nil
+}
+
+func typeCheckStatement(stat statement, contractValue ValueInfo, clauseName string, env *environ) error {
+	switch stmt := stat.(type) {
+	case *ifStatement:
+		for _, trueStmt := range stmt.body.trueBody {
+			if err := typeCheckStatement(trueStmt, contractValue, clauseName, env); err != nil {
+				return err
+			}
+		}
+
+		for _, falseStmt := range stmt.body.falseBody {
+			if err := typeCheckStatement(falseStmt, contractValue, clauseName, env); err != nil {
+				return err
+			}
+		}
+
+	case *defineStatement:
+		if stmt.expr.typ(env) != stmt.varName.Type && !isHashSubtype(stmt.expr.typ(env)) {
+			return fmt.Errorf("expression in define statement in clause \"%s\" has type \"%s\", must be \"%s\"",
+				clauseName, stmt.expr.typ(env), stmt.varName.Type)
+		}
+
+	case *verifyStatement:
+		if t := stmt.expr.typ(env); t != boolType {
+			return fmt.Errorf("expression in verify statement in clause \"%s\" has type \"%s\", must be Boolean", clauseName, t)
+		}
+
+	case *lockStatement:
+		if t := stmt.lockedAmount.typ(env); !(t == intType || t == amountType) {
+			return fmt.Errorf("lockedAmount expression \"%s\" in lock statement in clause \"%s\" has type \"%s\", must be Integer", stmt.lockedAmount, clauseName, t)
+		}
+		if t := stmt.lockedAsset.typ(env); t != assetType {
+			return fmt.Errorf("lockedAsset expression \"%s\" in lock statement in clause \"%s\" has type \"%s\", must be Asset", stmt.lockedAsset, clauseName, t)
+		}
+		if t := stmt.program.typ(env); t != progType {
+			return fmt.Errorf("program in lock statement in clause \"%s\" has type \"%s\", must be Program", clauseName, t)
+		}
+
+	case *unlockStatement:
+		if t := stmt.unlockedAmount.typ(env); !(t == intType || t == amountType) {
+			return fmt.Errorf("unlockedAmount expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Integer", stmt.unlockedAmount, clauseName, t)
+		}
+		if t := stmt.unlockedAsset.typ(env); t != assetType {
+			return fmt.Errorf("unlockedAsset expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Asset", stmt.unlockedAsset, clauseName, t)
+		}
+		if stmt.unlockedAmount.String() != contractValue.Amount || stmt.unlockedAsset.String() != contractValue.Asset {
+			return fmt.Errorf("amount \"%s\" of asset \"%s\" expression in unlock statement of clause \"%s\" must be the contract valueAmount \"%s\" of valueAsset \"%s\"",
+				stmt.unlockedAmount.String(), stmt.unlockedAsset.String(), clauseName, contractValue.Amount, contractValue.Asset)
+		}
+	}
+
 	return nil
 }

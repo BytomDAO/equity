@@ -112,6 +112,15 @@ func (s defineStatement) countVarRefs(counts map[string]int) {
 	s.expr.countVarRefs(counts)
 }
 
+type assignStatement struct {
+	variable *Param
+	expr     expression
+}
+
+func (s assignStatement) countVarRefs(counts map[string]int) {
+	s.expr.countVarRefs(counts)
+}
+
 type ifStatement struct {
 	condition expression
 	body      *IfStatmentBody

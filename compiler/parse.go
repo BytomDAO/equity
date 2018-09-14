@@ -145,6 +145,8 @@ func parseStatement(p *parser) statement {
 		return parseIfStmt(p)
 	case "define":
 		return parseDefineStmt(p)
+	case "assign":
+		return parseAssignStmt(p)
 	case "verify":
 		return parseVerifyStmt(p)
 	case "lock":
@@ -189,6 +191,14 @@ func parseDefineStmt(p *parser) *defineStatement {
 		defineStat.expr = parseExpr(p)
 	}
 	return defineStat
+}
+
+func parseAssignStmt(p *parser) *assignStatement {
+	consumeKeyword(p, "assign")
+	varName := consumeIdentifier(p)
+	consumeTok(p, "=")
+	expr := parseExpr(p)
+	return &assignStatement{variable: &Param{Name: varName}, expr: expr}
 }
 
 func parseVerifyStmt(p *parser) *verifyStatement {

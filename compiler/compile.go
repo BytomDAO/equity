@@ -469,6 +469,24 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			stk.str = stmt.variable.Name
 		}
 
+	case *assignStatement:
+		// find variable from environ with roleClauseVariable
+		if entry := env.lookup(string(stmt.variable.Name)); entry != nil {
+			if entry.r != roleClauseVariable {
+				return stk, fmt.Errorf("the type of variable is not roleClauseVariable in assign statement in clause \"%s\"", clause.Name)
+			}
+			stmt.variable.Type = entry.t
+		}
+
+		// variable
+		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
+		if err != nil {
+			return stk, errors.Wrapf(err, "in define statement in clause \"%s\"", clause.Name)
+		}
+
+		// modify stack name
+		stk.str = stmt.variable.Name
+
 	case *verifyStatement:
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
 		if err != nil {

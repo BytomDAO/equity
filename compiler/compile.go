@@ -321,6 +321,10 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	// a count of the number of times each variable is referenced
 	counts := make(map[string]int)
 	for _, s := range clause.statements {
+		if stmt, ok := s.(*defineStatement); ok && stmt.expr == nil {
+			continue
+		}
+
 		s.countVarRefs(counts)
 		if stmt, ok := s.(*ifStatement); ok {
 			for _, trueStmt := range stmt.body.trueBody {
@@ -449,18 +453,20 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		b.addJumpTarget(stk, "endif_"+strSequence)
 
 	case *defineStatement:
-		// variable
-		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
-		if err != nil {
-			return stk, errors.Wrapf(err, "in define statement in clause \"%s\"", clause.Name)
+		// add environ for define variable
+		if err = env.add(stmt.variable.Name, stmt.variable.Type, roleClauseVariable); err != nil {
+			return stk, err
 		}
 
-		// modify stack name
-		stk.str = stmt.varName.Name
+		if stmt.expr != nil {
+			// variable
+			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
+			if err != nil {
+				return stk, errors.Wrapf(err, "in define statement in clause \"%s\"", clause.Name)
+			}
 
-		// add environ for define variable
-		if err = env.add(stmt.varName.Name, stmt.varName.Type, roleClauseVariable); err != nil {
-			return stk, err
+			// modify stack name
+			stk.str = stmt.variable.Name
 		}
 
 	case *verifyStatement:

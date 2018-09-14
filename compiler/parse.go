@@ -172,13 +172,23 @@ func parseIfStmt(p *parser) *ifStatement {
 }
 
 func parseDefineStmt(p *parser) *defineStatement {
+	defineStat := &defineStatement{}
 	consumeKeyword(p, "define")
-	variableName := consumeIdentifier(p)
+	param := &Param{}
+	param.Name = consumeIdentifier(p)
 	consumeTok(p, ":")
 	variableType := consumeIdentifier(p)
-	consumeTok(p, "=")
-	expr := parseExpr(p)
-	return &defineStatement{varName: &Param{Name: variableName, Type: typeDesc(variableType)}, expr: expr}
+	if tdesc, ok := types[variableType]; ok {
+		param.Type = tdesc
+	} else {
+		p.errorf("unknown type %s", variableType)
+	}
+	defineStat.variable = param
+	if peekTok(p, "=") {
+		consumeTok(p, "=")
+		defineStat.expr = parseExpr(p)
+	}
+	return defineStat
 }
 
 func parseVerifyStmt(p *parser) *verifyStatement {

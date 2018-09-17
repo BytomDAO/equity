@@ -478,11 +478,39 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			stmt.variable.Type = entry.t
 		}
 
+		// temporary store the counts of defined variable
+		varCount := counts[stmt.variable.Name]
+
+		// calculate the counts of variable for assign statement
+		tmpCounts := make(map[string]int)
+		stmt.countVarRefs(tmpCounts)
+
+		// modify the map counts of defined variable to 1 and minus the number of defined variable
+		// when the assign expression contains the defined variable
+		if tmpCounts[stmt.variable.Name] > 0 {
+			counts[stmt.variable.Name] = 1
+			varCount -= tmpCounts[stmt.variable.Name]
+		} else {
+			depth := stk.find(stmt.variable.Name)
+			switch depth {
+			case 0:
+				break
+			case 1:
+				stk = b.addSwap(stk)
+			default:
+				stk = b.addRoll(stk, depth)
+			}
+			stk = b.addDrop(stk)
+		}
+
 		// variable
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
 		if err != nil {
 			return stk, errors.Wrapf(err, "in define statement in clause \"%s\"", clause.Name)
 		}
+
+		// restore the defined variable counts
+		counts[stmt.variable.Name] = varCount
 
 		// modify stack name
 		stk.str = stmt.variable.Name

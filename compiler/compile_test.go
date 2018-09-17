@@ -67,6 +67,11 @@ func TestCompile(t *testing.T) {
 			"52797b937b7887916987",
 		},
 		{
+			"TestAssignVar",
+			equitytest.TestAssignVar,
+			"7b7b9387",
+		},
+		{
 			"TestSigIf",
 			equitytest.TestSigIf,
 			"53797b879169765379a00087641c00000052795279a0696321000000765279a069",

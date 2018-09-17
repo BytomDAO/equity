@@ -102,6 +102,17 @@ contract TestDefineVar(result: Integer) locks valueAmount of valueAsset {
 }
 `
 
+const TestAssignVar = `
+contract TestAssignVar(result: Integer) locks valueAmount of valueAsset {
+  clause LockWithMath(first: Integer, second: Integer) {
+    define calculate: Integer = first
+    assign calculate = calculate + second
+    verify result == calculate
+    unlock valueAmount of valueAsset
+  }
+}
+`
+
 const TestSigIf = `
 contract TestSigIf(a: Integer, count:Integer) locks valueAmount of valueAsset {
   clause check(b: Integer, c: Integer) {

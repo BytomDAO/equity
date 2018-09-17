@@ -288,7 +288,7 @@ func typeCheckStatement(stat statement, contractValue ValueInfo, clauseName stri
 
 	case *assignStatement:
 		if stmt.expr.typ(env) != stmt.variable.Type && !isHashSubtype(stmt.expr.typ(env)) {
-			return fmt.Errorf("expression in define statement in clause \"%s\" has type \"%s\", must be \"%s\"",
+			return fmt.Errorf("expression in assign statement in clause \"%s\" has type \"%s\", must be \"%s\"",
 				clauseName, stmt.expr.typ(env), stmt.variable.Type)
 		}
 

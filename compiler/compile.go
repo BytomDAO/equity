@@ -476,6 +476,8 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 				return stk, fmt.Errorf("the type of variable is not roleClauseVariable in assign statement in clause \"%s\"", clause.Name)
 			}
 			stmt.variable.Type = entry.t
+		} else {
+			return stk, fmt.Errorf("the variable \"%s\" is not defined before the assign statement in clause \"%s\"", stmt.variable.Name, clause.Name)
 		}
 
 		// temporary store the counts of defined variable

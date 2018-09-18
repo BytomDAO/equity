@@ -145,6 +145,8 @@ func parseStatement(p *parser) statement {
 		return parseIfStmt(p)
 	case "define":
 		return parseDefineStmt(p)
+	case "assign":
+		return parseAssignStmt(p)
 	case "verify":
 		return parseVerifyStmt(p)
 	case "lock":
@@ -172,13 +174,31 @@ func parseIfStmt(p *parser) *ifStatement {
 }
 
 func parseDefineStmt(p *parser) *defineStatement {
+	defineStat := &defineStatement{}
 	consumeKeyword(p, "define")
-	variableName := consumeIdentifier(p)
+	param := &Param{}
+	param.Name = consumeIdentifier(p)
 	consumeTok(p, ":")
 	variableType := consumeIdentifier(p)
+	if tdesc, ok := types[variableType]; ok {
+		param.Type = tdesc
+	} else {
+		p.errorf("unknown type %s", variableType)
+	}
+	defineStat.variable = param
+	if peekTok(p, "=") {
+		consumeTok(p, "=")
+		defineStat.expr = parseExpr(p)
+	}
+	return defineStat
+}
+
+func parseAssignStmt(p *parser) *assignStatement {
+	consumeKeyword(p, "assign")
+	varName := consumeIdentifier(p)
 	consumeTok(p, "=")
 	expr := parseExpr(p)
-	return &defineStatement{varName: &Param{Name: variableName, Type: typeDesc(variableType)}, expr: expr}
+	return &assignStatement{variable: &Param{Name: varName}, expr: expr}
 }
 
 func parseVerifyStmt(p *parser) *verifyStatement {

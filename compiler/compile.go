@@ -321,6 +321,10 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	// a count of the number of times each variable is referenced
 	counts := make(map[string]int)
 	for _, s := range clause.statements {
+		if stmt, ok := s.(*defineStatement); ok && stmt.expr == nil {
+			continue
+		}
+
 		s.countVarRefs(counts)
 		if stmt, ok := s.(*ifStatement); ok {
 			for _, trueStmt := range stmt.body.trueBody {
@@ -449,19 +453,74 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		b.addJumpTarget(stk, "endif_"+strSequence)
 
 	case *defineStatement:
+		// add environ for define variable
+		if err = env.add(stmt.variable.Name, stmt.variable.Type, roleClauseVariable); err != nil {
+			return stk, err
+		}
+
+		// check whether the variable is used or not
+		if counts[stmt.variable.Name] == 0 {
+			return stk, fmt.Errorf("the defined variable \"%s\" is unused in clause \"%s\"", stmt.variable.Name, clause.Name)
+		}
+
+		if stmt.expr != nil {
+			// variable
+			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
+			if err != nil {
+				return stk, errors.Wrapf(err, "in define statement in clause \"%s\"", clause.Name)
+			}
+
+			// modify stack name
+			stk.str = stmt.variable.Name
+		}
+
+	case *assignStatement:
+		// find variable from environ with roleClauseVariable
+		if entry := env.lookup(string(stmt.variable.Name)); entry != nil {
+			if entry.r != roleClauseVariable {
+				return stk, fmt.Errorf("the type of variable is not roleClauseVariable in assign statement in clause \"%s\"", clause.Name)
+			}
+			stmt.variable.Type = entry.t
+		} else {
+			return stk, fmt.Errorf("the variable \"%s\" is not defined before the assign statement in clause \"%s\"", stmt.variable.Name, clause.Name)
+		}
+
+		// temporary store the counts of defined variable
+		varCount := counts[stmt.variable.Name]
+
+		// calculate the counts of variable for assign statement
+		tmpCounts := make(map[string]int)
+		stmt.countVarRefs(tmpCounts)
+
+		// modify the map counts of defined variable to 1 and minus the number of defined variable
+		// when the assign expression contains the defined variable
+		if tmpCounts[stmt.variable.Name] > 0 {
+			counts[stmt.variable.Name] = 1
+			varCount -= tmpCounts[stmt.variable.Name]
+		} else {
+			depth := stk.find(stmt.variable.Name)
+			switch depth {
+			case 0:
+				break
+			case 1:
+				stk = b.addSwap(stk)
+			default:
+				stk = b.addRoll(stk, depth)
+			}
+			stk = b.addDrop(stk)
+		}
+
 		// variable
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)
 		if err != nil {
 			return stk, errors.Wrapf(err, "in define statement in clause \"%s\"", clause.Name)
 		}
 
-		// modify stack name
-		stk.str = stmt.varName.Name
+		// restore the defined variable counts
+		counts[stmt.variable.Name] = varCount
 
-		// add environ for define variable
-		if err = env.add(stmt.varName.Name, stmt.varName.Type, roleClauseVariable); err != nil {
-			return stk, err
-		}
+		// modify stack name
+		stk.str = stmt.variable.Name
 
 	case *verifyStatement:
 		stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)

@@ -104,11 +104,20 @@ type statement interface {
 }
 
 type defineStatement struct {
-	varName *Param
-	expr    expression
+	variable *Param
+	expr     expression
 }
 
 func (s defineStatement) countVarRefs(counts map[string]int) {
+	s.expr.countVarRefs(counts)
+}
+
+type assignStatement struct {
+	variable *Param
+	expr     expression
+}
+
+func (s assignStatement) countVarRefs(counts map[string]int) {
 	s.expr.countVarRefs(counts)
 }
 

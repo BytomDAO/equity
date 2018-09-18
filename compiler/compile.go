@@ -458,6 +458,11 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			return stk, err
 		}
 
+		// check whether the variable is used or not
+		if counts[stmt.variable.Name] == 0 {
+			return stk, fmt.Errorf("the defined variable \"%s\" is unused in clause \"%s\"", stmt.variable.Name, clause.Name)
+		}
+
 		if stmt.expr != nil {
 			// variable
 			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.expr)

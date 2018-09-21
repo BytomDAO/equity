@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
@@ -552,16 +551,21 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			stk = b.addAmount(stk, contract.Value.Amount)
 			stk = b.addAsset(stk, contract.Value.Asset)
 		} else {
+			// calculate the counts of variable for lockStatement
+			lockCounts := make(map[string]int)
+			stmt.countVarRefs(lockCounts)
+
 			// amount
-			if stmt.lockedAmount.String() == contract.Value.Amount {
+			switch {
+			case stmt.lockedAmount.String() == contract.Value.Amount:
 				stk = b.addAmount(stk, contract.Value.Amount)
-			} else if strings.Contains(stmt.lockedAmount.String(), contract.Value.Amount) {
+			case stmt.lockedAmount.String() != contract.Value.Amount && lockCounts[contract.Value.Amount] > 0:
 				stk = b.addAmount(stk, contract.Value.Amount)
 				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAmount)
 				if err != nil {
 					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
 				}
-			} else {
+			default:
 				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAmount)
 				if err != nil {
 					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
@@ -569,15 +573,16 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 			}
 
 			// asset
-			if stmt.lockedAsset.String() == contract.Value.Asset {
+			switch {
+			case stmt.lockedAsset.String() == contract.Value.Asset:
 				stk = b.addAsset(stk, contract.Value.Asset)
-			} else if strings.Contains(stmt.lockedAsset.String(), contract.Value.Asset) {
+			case stmt.lockedAsset.String() != contract.Value.Asset && lockCounts[contract.Value.Asset] > 0:
 				stk = b.addAsset(stk, contract.Value.Asset)
 				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAsset)
 				if err != nil {
 					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
 				}
-			} else {
+			default:
 				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.lockedAsset)
 				if err != nil {
 					return stk, errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)

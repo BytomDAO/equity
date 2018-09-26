@@ -469,7 +469,7 @@ func scanIntLiteral(buf []byte, offset int) (integerLiteral, int) {
 	i := offset
 	for ; i < len(buf) && unicode.IsDigit(rune(buf[i])); i++ {
 		// the literal is BytesLiteral when it starts with 0x/0X
-		if buf[i] == '0' && (buf[i+1] == 'x' || buf[i+1] == 'X') {
+		if buf[i] == '0' && i < len(buf)-1 && (buf[i+1] == 'x' || buf[i+1] == 'X') {
 			return 0, -1
 		}
 	}

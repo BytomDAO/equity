@@ -488,13 +488,19 @@ func scanStrLiteral(buf []byte, offset int) (bytesLiteral, int) {
 	if offset >= len(buf) || buf[offset] != '\'' {
 		return bytesLiteral{}, -1
 	}
+	var byteBuf bytesLiteral
 	for i := offset + 1; i < len(buf); i++ {
 		if buf[i] == '\'' {
-			return bytesLiteral(buf[offset : i+1]), i + 1
+			return byteBuf, i + 1
 		}
-		if buf[i] == '\\' {
-			i++
+		if buf[i] == '\\' && i < len(buf)-1 {
+			if c, ok := scanEscape(buf[i+1]); ok {
+				byteBuf = append(byteBuf, c)
+				i++
+				continue
+			}
 		}
+		byteBuf = append(byteBuf, buf[i])
 	}
 	panic(parseErr(buf, offset, "unterminated string literal"))
 }
@@ -596,4 +602,26 @@ func (p parserErr) Error() string {
 	args := []interface{}{line, col}
 	args = append(args, p.args...)
 	return fmt.Sprintf("line %d, col %d: "+p.format, args...)
+}
+
+func scanEscape(c byte) (byte, bool) {
+	escapeFlag := true
+	switch c {
+	case '\'', '"', '\\':
+	case 'b':
+		c = '\b'
+	case 'f':
+		c = '\f'
+	case 'n':
+		c = '\n'
+	case 'r':
+		c = '\r'
+	case 't':
+		c = '\t'
+	case 'v':
+		c = '\v'
+	default:
+		escapeFlag = false
+	}
+	return c, escapeFlag
 }

@@ -167,3 +167,13 @@ contract TestIfNesting(a: Integer, count:Integer) locks valueAmount of valueAsse
   }
 }
 `
+const TestConstantMath = `
+contract TestConstantMath(result: Integer, hashByte: Hash, hashStr: Hash) locks valueAmount of valueAsset {
+  clause calculation(left: Integer, right: Integer) {
+    verify result == left + right + 10
+    verify hashByte == sha3(0x31323330)
+    verify hashStr == sha3('string')
+    unlock valueAmount of valueAsset
+  }
+}
+`

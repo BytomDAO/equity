@@ -89,7 +89,7 @@ func TestCompile(t *testing.T) {
 		{
 			"TestConstantMath",
 			equitytest.TestConstantMath,
-			"547a547a935a93880431323330aa8806737472696e67aa87",
+			"71935a93880431323330aa8806737472696e67aa880087",
 		},
 	}
 	for _, c := range cases {

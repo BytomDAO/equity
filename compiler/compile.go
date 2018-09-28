@@ -650,9 +650,6 @@ func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env 
 					return stk, fmt.Errorf("type mismatch in \"%s\": left operand has type \"%s\", right operand has type \"%s\"", e, lType, rType)
 				}
 			}
-			if lType == "Boolean" {
-				return stk, fmt.Errorf("in \"%s\": using \"%s\" on Boolean values not allowed", e, e.op.op)
-			}
 		}
 
 		stk = b.addOps(stk.dropN(2), e.op.opcodes, e.String())

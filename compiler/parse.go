@@ -348,8 +348,9 @@ func peekTok(p *parser, token string) bool {
 // consume functions
 
 var keywords = []string{
-	"contract", "clause", "verify", "output", "return",
-	"locks", "requires", "of", "lock", "with", "unlock",
+	"contract", "clause", "verify", "locks", "of",
+	"lock", "with", "unlock", "if", "else",
+	"define", "assign", "true", "false",
 }
 
 func consumeKeyword(p *parser, keyword string) {

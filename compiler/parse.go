@@ -348,8 +348,9 @@ func peekTok(p *parser, token string) bool {
 // consume functions
 
 var keywords = []string{
-	"contract", "clause", "verify", "output", "return",
-	"locks", "requires", "of", "lock", "with", "unlock",
+	"contract", "clause", "verify", "locks", "of",
+	"lock", "with", "unlock", "if", "else",
+	"define", "assign", "true", "false",
 }
 
 func consumeKeyword(p *parser, keyword string) {
@@ -425,6 +426,10 @@ func scanLiteralExpr(buf []byte, offset int) (expression, int) {
 	bytesliteral, newOffset := scanBytesLiteral(buf, offset) // 0x6c249a...
 	if newOffset >= 0 {
 		return bytesliteral, newOffset
+	}
+	booleanLiteral, newOffset := scanBoolLiteral(buf, offset) // true or false
+	if newOffset >= 0 {
+		return booleanLiteral, newOffset
 	}
 	return nil, -1
 }
@@ -534,6 +539,22 @@ func scanBytesLiteral(buf []byte, offset int) (bytesLiteral, int) {
 		return bytesLiteral{}, -1
 	}
 	return bytesLiteral(decoded), i
+}
+
+func scanBoolLiteral(buf []byte, offset int) (booleanLiteral, int) {
+	offset = skipWsAndComments(buf, offset)
+	if offset >= len(buf) {
+		return false, -1
+	}
+
+	newOffset := scanKeyword(buf, offset, "true")
+	if newOffset < 0 {
+		if newOffset = scanKeyword(buf, offset, "false"); newOffset < 0 {
+			return false, -1
+		}
+		return false, newOffset
+	}
+	return true, newOffset
 }
 
 func skipWsAndComments(buf []byte, offset int) int {

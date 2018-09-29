@@ -173,7 +173,7 @@ contract TestConstantMath(result: Integer, hashByte: Hash, hashStr: Hash, outcom
     verify result == left + right + 10
     verify hashByte == sha3(0x31323330)
     verify hashStr == sha3('string')
-    verify outcome == false
+    verify !outcome
     unlock valueAmount of valueAsset
   }
 }

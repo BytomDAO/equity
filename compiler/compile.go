@@ -373,10 +373,9 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		}
 
 		// jump to falseBody when condition is false, while the JUMPIF instruction will be run success when
-		// the value of dataStack is true, therefore add this check
+		// the value of dataStack is true, therefore add this negation
 		conditionExpr := stk.str
-		stk = b.addBoolean(stk, false)
-		stk = b.addEqual(stk, fmt.Sprintf("(%s == false)", conditionExpr)) // stack: [... <condition_result == false>]
+		stk = b.addNot(stk, fmt.Sprintf("!%s", conditionExpr))
 
 		// add label
 		var label string

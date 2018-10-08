@@ -44,6 +44,10 @@ func (b *builder) addInt64(stk stack, n int64) stack {
 	return b.add(s, stk.add(s))
 }
 
+func (b *builder) addNot(stk stack, desc string) stack {
+	return b.add("NOT", stk.drop().add(desc))
+}
+
 func (b *builder) addEqual(stk stack, desc string) stack {
 	return b.add("EQUAL", stk.dropN(2).add(desc))
 }

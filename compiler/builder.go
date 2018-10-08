@@ -154,6 +154,10 @@ func (b *builder) addCat(stk stack, desc string) stack {
 	return b.add("CAT", stk.dropN(2).add(desc))
 }
 
+func (b *builder) addNop(stk stack) stack {
+	return b.add("NOP", stk)
+}
+
 func (b *builder) opcodes() string {
 	var ops []string
 	for _, item := range b.items {

@@ -18,7 +18,7 @@ var (
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Println("command args: [command] [contract file_path]")
+		fmt.Println("command args: [command] [contract file_path]\n")
 		os.Exit(0)
 	}
 
@@ -63,9 +63,9 @@ func main() {
 	fmt.Fprintf(header, "package instance\n\n")
 
 	imports := map[string]bool{
-		"bytes":                        true,
-		"encoding/hex":                 true,
-		"fmt":                          true,
+		"bytes":        true,
+		"encoding/hex": true,
+		"fmt":          true,
 		"github.com/equity/compiler":   true,
 		"github.com/bytom/protocol/vm": true,
 	}

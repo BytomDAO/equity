@@ -377,6 +377,9 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		conditionExpr := stk.str
 		stk = b.addNot(stk, fmt.Sprintf("!%s", conditionExpr))
 
+		// add nop instruction to differ with clause selector for JUMPIF instruction
+		stk = b.addNop(stk)
+
 		// add label
 		var label string
 		if len(stmt.body.falseBody) != 0 {

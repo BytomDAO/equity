@@ -498,7 +498,9 @@ func compileStatement(b *builder, stk stack, contract *Contract, env *environ, c
 		}
 
 		// restore the defined variable counts
-		counts[stmt.variable.Name] = varCount
+		if tmpCounts[stmt.variable.Name] > 0 {
+			counts[stmt.variable.Name] = varCount
+		}
 
 		// modify stack name
 		stk.str = stmt.variable.Name

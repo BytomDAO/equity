@@ -95,6 +95,7 @@ var equityCmd = &cobra.Command{
 					continue
 				}
 
+				fmt.Println("Instantiated program:")
 				if len(args)-1 < len(contract.Params) {
 					fmt.Printf("Error: The number of input arguments %d is less than the number of contract parameters %d\n", len(args)-1, len(contract.Params))
 					usage := fmt.Sprintf("Usage:\n  equity %s", args[0])
@@ -116,8 +117,6 @@ var equityCmd = &cobra.Command{
 					fmt.Println("Instantiate contract error:", err)
 					os.Exit(0)
 				}
-
-				fmt.Println("Instantiated contract program:")
 				fmt.Printf("%v\n\n", hex.EncodeToString(instantProg))
 			}
 		}

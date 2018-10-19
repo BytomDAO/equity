@@ -1,6 +1,6 @@
 # equity compiler tool
 
-the binary tool equity around the equity compiler.
+The equity compiler tool is the equity commandline compiler.
 
 ## Requirements
 
@@ -10,6 +10,11 @@ Build source code, the build target of the equity compiler commandline tool is `
 
 ```bash
 $ make tool
+```
+
+then change directory to `equity`, and you can find the tool `equity` :
+```bash
+$ cd equity
 ```
 
 ## Usage on the commandline
@@ -107,6 +112,7 @@ Usage:
 ```
 
 The input contract argument description:
+
 | type | value description |
 | ---- | ----------- |
 | Boolean | true/1 , false/0 |

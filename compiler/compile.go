@@ -619,12 +619,14 @@ func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env 
 		}
 
 		lType := e.left.typ(env)
-		if e.op.left != "" && !(lType == e.op.left || lType == amountType) {
+		if e.op.left != "" && ((e.op.left == intType && !(lType == amountType || lType == intType)) ||
+			(e.op.left == boolType && !(lType == boolType))) {
 			return stk, fmt.Errorf("in \"%s\", left operand has type \"%s\", must be \"%s\"", e, lType, e.op.left)
 		}
 
 		rType := e.right.typ(env)
-		if e.op.right != "" && !(rType == e.op.right || rType == amountType) {
+		if e.op.right != "" && ((e.op.right == intType && !(rType == amountType || rType == intType)) ||
+			(e.op.right == boolType && !(rType == boolType))) {
 			return stk, fmt.Errorf("in \"%s\", right operand has type \"%s\", must be \"%s\"", e, rType, e.op.right)
 		}
 
@@ -680,7 +682,8 @@ func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env 
 
 					for i := len(e.args) - 1; i >= 0; i-- {
 						arg := e.args[i]
-						if entry.c.Params[i].Type != "" && arg.typ(env) != entry.c.Params[i].Type {
+						if entry.c.Params[i].Type != "" && arg.typ(env) != entry.c.Params[i].Type &&
+							!(arg.typ(env) == intType && entry.c.Params[i].Type == amountType) {
 							return stk, fmt.Errorf("argument %d to contract \"%s\" has type \"%s\", must be \"%s\"", i, entry.c.Name, arg.typ(env), entry.c.Params[i].Type)
 						}
 						stk, err = compileExpr(b, stk, contract, clause, env, counts, arg)

@@ -342,10 +342,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 		}
 	}
 
-	err = requireAllValuesDisposedOnce(contract, clause)
-	if err != nil {
-		return err
-	}
 	err = typeCheckClause(contract, clause, env)
 	if err != nil {
 		return err

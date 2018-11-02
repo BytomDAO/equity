@@ -40,9 +40,9 @@ of late Nov 2018.
     The later expr after "with" must be a program. This expression describe that
     the value(expr "of" expr) is unlocked and re-locks it with the new program immediately.
 
-  define = "define" identifier [":=" expr]
+  define = "define" identifier : TypeName ["=" expr]
 
-    Define a temporary variable "identifier". the identifier can be defined only
+    Define a temporary variable "identifier" with type "TypeName". the identifier can be defined only
     or assigned with expr.
 
   assign = "assign" identifier "=" expr

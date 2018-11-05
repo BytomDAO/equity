@@ -39,7 +39,7 @@ func main() {
 }
 
 var equityCmd = &cobra.Command{
-	Use:     "equity [options] [input_file...]",
+	Use:     "equity <input_file>",
 	Short:   "equity commandline compiler",
 	Example: "equity contract_name [contract_args...] --bin --instance",
 	Args:    cobra.RangeArgs(1, 100),

@@ -44,14 +44,17 @@ func parse(buf []byte) (contracts []*Contract, err error) {
 	return
 }
 
-// parse functions
-
+// parse contracts
 func parseContracts(p *parser) []*Contract {
 	var result []*Contract
+	contracts := parseImportDirectives(p)
+	for _, c := range contracts {
+		result = append(result, c)
+	}
+
 	if pos := scanKeyword(p.buf, p.pos, "contract"); pos < 0 {
 		p.errorf("expected contract")
 	}
-
 	for peekKeyword(p) == "contract" {
 		contract := parseContract(p)
 		result = append(result, contract)

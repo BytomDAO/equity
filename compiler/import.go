@@ -20,6 +20,11 @@ func parseImportDirectives(p *parser) []*Contract {
 
 func parseImportDirective(p *parser) []*Contract {
 	path := parseImport(p)
+	if len(path) == 0 {
+		p.errorf("Import path is empty")
+	}
+
+	// acquire absolute path and check the
 	filename, err := absolutePath(string(path))
 	if err != nil {
 		p.errorf("Check absolute path error: %v", err)
@@ -49,7 +54,7 @@ func parseImport(p *parser) []byte {
 	consumeKeyword(p, "import")
 	importPath, newOffset := scanStrLiteral(p.buf, p.pos)
 	if newOffset < 0 {
-		p.errorf("Invalid import character format!")
+		p.errorf("Invalid import character format")
 	}
 	p.pos = newOffset
 

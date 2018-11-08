@@ -19,20 +19,20 @@ func parseImportDirectives(p *parser) []*Contract {
 }
 
 func parseImportDirective(p *parser) []*Contract {
-	path := parseImport(p)
-	if len(path) == 0 {
+	pathFile := parseImport(p)
+	if len(pathFile) == 0 {
 		p.errorf("Import path is empty")
 	}
 
-	// acquire absolute path and check the
-	filename, err := absolutePath(string(path))
+	// acquire absolute path and check the file status
+	importFile, err := absolutePath(string(pathFile))
 	if err != nil {
 		p.errorf("Check absolute path error: %v", err)
 	}
 
-	inputFile, err := os.Open(filename)
+	inputFile, err := os.Open(importFile)
 	if err != nil {
-		p.errorf("Open the import contract file \"%s\" error: %v", filename, err)
+		p.errorf("Open the import contract file \"%s\" error: %v", importFile, err)
 	}
 	defer inputFile.Close()
 
@@ -52,24 +52,24 @@ func parseImportDirective(p *parser) []*Contract {
 
 func parseImport(p *parser) []byte {
 	consumeKeyword(p, "import")
-	importPath, newOffset := scanStrLiteral(p.buf, p.pos)
+	importPathFile, newOffset := scanStrLiteral(p.buf, p.pos)
 	if newOffset < 0 {
 		p.errorf("Invalid import character format")
 	}
 	p.pos = newOffset
 
-	return importPath
+	return importPathFile
 }
 
-func absolutePath(path string) (string, error) {
-	absPath, err := filepath.Abs(path)
+func absolutePath(pathFile string) (string, error) {
+	absPathFile, err := filepath.Abs(pathFile)
 	if err != nil {
 		return "", err
 	}
 
-	// check the status of absolute path
-	if _, err := os.Stat(absPath); err != nil {
+	// check the status of absolute path file
+	if _, err := os.Stat(absPathFile); err != nil {
 		return "", err
 	}
-	return absPath, nil
+	return absPathFile, nil
 }

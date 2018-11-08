@@ -497,12 +497,12 @@ func scanIntLiteral(buf []byte, offset int) (integerLiteral, int) {
 
 func scanStrLiteral(buf []byte, offset int) (bytesLiteral, int) {
 	offset = skipWsAndComments(buf, offset)
-	if offset >= len(buf) || buf[offset] != '\'' {
+	if offset >= len(buf) || !(buf[offset] == '\'' || buf[offset] == '"') {
 		return bytesLiteral{}, -1
 	}
 	var byteBuf bytesLiteral
 	for i := offset + 1; i < len(buf); i++ {
-		if buf[i] == '\'' {
+		if (buf[offset] == '\'' && buf[i] == '\'') || (buf[offset] == '"' && buf[i] == '"') {
 			return byteBuf, i + 1
 		}
 		if buf[i] == '\\' && i < len(buf)-1 {

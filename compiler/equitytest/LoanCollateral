@@ -1,0 +1,18 @@
+import "./RepayCollateral"
+
+contract LoanCollateral(assetLoaned: Asset,
+                        amountLoaned: Amount,
+                        loanBlockHeight: Integer,
+                        RepayBlockHeight: Integer,
+                        lender: Program,
+                        borrower: Program) locks valueAmount of valueAsset {
+  clause loan() {
+    verify below(loanBlockHeight)
+    lock amountLoaned of assetLoaned with RepayCollateral(valueAsset, valueAmount, RepayBlockHeight, lender, borrower)
+    lock valueAmount of valueAsset with borrower
+  }
+  clause cancel() {
+    verify above(loanBlockHeight)
+    lock valueAmount of valueAsset with lender
+  }
+}

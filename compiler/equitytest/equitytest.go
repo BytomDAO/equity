@@ -70,6 +70,19 @@ contract EscrowedTransfer(agent: PublicKey, sender: Program, recipient: Program)
 }
 `
 
+const CollateralizedLoan = `
+contract CollateralizedLoan(balanceAsset: Asset, balanceAmount: Amount, finalHeight: Integer, lender: Program, borrower: Program) locks valueAmount of valueAsset {
+  clause repay() {
+    lock balanceAmount of balanceAsset with lender
+    lock valueAmount of valueAsset with borrower
+  }
+  clause default() {
+    verify above(finalHeight)
+    lock valueAmount of valueAsset with lender
+  }
+}
+`
+
 const RevealPreimage = `
 contract RevealPreimage(hash: Hash) locks amount of asset {
   clause reveal(string: String) {
@@ -86,6 +99,31 @@ contract PriceChanger(askAmount: Amount, askAsset: Asset, sellerKey: PublicKey, 
   }
   clause redeem() {
     lock askAmount of askAsset with sellerProg
+    unlock valueAmount of valueAsset
+  }
+}
+`
+
+const CallOptionWithSettlement = `
+contract CallOptionWithSettlement(strikePrice: Amount,
+                    strikeCurrency: Asset,
+                    sellerProgram: Program,
+                    sellerKey: PublicKey,
+                    buyerKey: PublicKey,
+                    finalHeight: Integer) locks valueAmount of valueAsset {
+  clause exercise(buyerSig: Signature) {
+    verify below(finalHeight)
+    verify checkTxSig(buyerKey, buyerSig)
+    lock strikePrice of strikeCurrency with sellerProgram
+    unlock valueAmount of valueAsset
+  }
+  clause expire() {
+    verify above(finalHeight)
+    lock valueAmount of valueAsset with sellerProgram
+  }
+  clause settle(sellerSig: Signature, buyerSig: Signature) {
+    verify checkTxSig(sellerKey, sellerSig)
+    verify checkTxSig(buyerKey, buyerSig)
     unlock valueAmount of valueAsset
   }
 }

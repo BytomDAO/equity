@@ -52,6 +52,11 @@ func TestCompile(t *testing.T) {
 			"537a641a000000537a7cae7cac6900c3c251557ac16328000000537a7cae7cac6900c3c251547ac1",
 		},
 		{
+			"CollateralizedLoan",
+			equitytest.CollateralizedLoan,
+			"557a641b000000007b7b51557ac16951c3c251557ac163260000007bcd9f6900c3c251567ac1",
+		},
+		{
 			"RevealPreimage",
 			equitytest.RevealPreimage,
 			"7caa87",
@@ -60,6 +65,11 @@ func TestCompile(t *testing.T) {
 			"PriceChanger",
 			equitytest.PriceChanger,
 			"557a6432000000557a5479ae7cac6900c3c25100597a89587a89587a89587a89557a890274787e008901c07ec1633a000000007b537a51567ac1",
+		},
+		{
+			"CallOptionWithSettlement",
+			equitytest.CallOptionWithSettlement,
+			"567a76529c64360000006425000000557acda06971ae7cac69007c7b51547ac16346000000557acd9f6900c3c251567ac1634600000075577a547aae7cac69557a547aae7cac",
 		},
 		{
 			"TestDefineVar",

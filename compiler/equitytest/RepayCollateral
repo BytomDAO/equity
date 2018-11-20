@@ -1,0 +1,15 @@
+contract RepayCollateral(assetRepayed: Asset,
+                        amountRepayed: Amount,
+                        RepayBlockHeight: Integer,
+                        lender: Program,
+                        borrower: Program) locks valueAmount of valueAsset {
+  clause repay() {
+    verify below(RepayBlockHeight)
+    lock amountRepayed of assetRepayed with lender
+    lock valueAmount of valueAsset with borrower
+  }
+  clause default() {
+    verify above(RepayBlockHeight)
+    lock valueAmount of valueAsset with lender
+  }
+}

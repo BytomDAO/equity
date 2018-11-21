@@ -778,7 +778,6 @@ func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env 
 
 			stk, k2, err = compileArg(b, stk, contract, clause, env, counts, e.args[0])
 			if err != nil {
-
 				return stk, err
 			}
 

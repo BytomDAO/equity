@@ -319,21 +319,8 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 
 	// a count of the number of times each variable is referenced
 	counts := make(map[string]int)
-	for _, s := range clause.statements {
-		if stmt, ok := s.(*defineStatement); ok && stmt.expr == nil {
-			continue
-		}
-
-		s.countVarRefs(counts)
-		if stmt, ok := s.(*ifStatement); ok {
-			for _, trueStmt := range stmt.body.trueBody {
-				trueStmt.countVarRefs(counts)
-			}
-
-			for _, falseStmt := range stmt.body.falseBody {
-				falseStmt.countVarRefs(counts)
-			}
-		}
+	for _, stat := range clause.statements {
+		counts = countsVarRef(stat, counts)
 	}
 
 	for _, stat := range clause.statements {

@@ -122,7 +122,7 @@ func Instantiate(body []byte, params []*Param, recursive bool, args []ContractAr
 			if arg.I == nil {
 				return nil, fmt.Errorf("type mismatch in arg %d (want integer)", i)
 			}
-		case assetType, hashType, progType, pubkeyType, sigType, strType:
+		case assetType, hashType, progType, pubkeyType, sigType, signType, strType:
 			if arg.S == nil {
 				return nil, fmt.Errorf("type mismatch in arg %d (want string)", i)
 			}

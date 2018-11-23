@@ -15,6 +15,7 @@ var (
 	progType     = typeDesc("Program")
 	pubkeyType   = typeDesc("PublicKey")
 	sigType      = typeDesc("Signature")
+	signType     = typeDesc("Sign")
 	strType      = typeDesc("String")
 
 	sha3StrType      = typeDesc("Sha3(String)")
@@ -35,6 +36,7 @@ var types = map[string]typeDesc{
 	string(progType):   progType,
 	string(pubkeyType): pubkeyType,
 	string(sigType):    sigType,
+	string(signType):   signType,
 	string(strType):    strType,
 
 	string(sha3StrType):      sha3StrType,

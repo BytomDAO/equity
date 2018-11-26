@@ -128,7 +128,7 @@ func main() {
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{B: &%s})\n", param.Name)
 			case "Integer":
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{I: &%s})\n", param.Name)
-			case "Hash", "Program", "PublicKey", "Signature", "String":
+			case "Hash", "Program", "PublicKey", "Signature", "Sign", "String":
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{S: (*json.HexBytes)(&%s)})\n", param.Name)
 			}
 		}
@@ -271,6 +271,9 @@ func asGoParams(params []*compiler.Param) (goParams string, imports []string) {
 			imports = append(imports, "github.com/bytom/crypto/ed25519")
 			strFlag = true
 		case "Signature":
+			typ = "[]byte"
+			strFlag = true
+		case "Sign":
 			typ = "[]byte"
 			strFlag = true
 		case "String":

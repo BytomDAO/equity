@@ -227,6 +227,16 @@ contract TestConstantMath(result: Integer, hashByte: Hash, hashStr: Hash, outcom
 }
 `
 
+const VerifySignature = `
+contract VerifySignature(sig1: Sign, sig2: Sign, msgHash: Hash) locks valueAmount of valueAsset {
+  clause check(publicKey1: PublicKey, publicKey2: PublicKey) {
+    verify checkMsgSig(publicKey1, msgHash, sig1)
+    verify checkMsgSig(publicKey2, msgHash, sig2)
+    unlock valueAmount of valueAsset
+  }
+}
+`
+
 func TestCompile(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -317,6 +327,11 @@ func TestCompile(t *testing.T) {
 			"TestConstantMath",
 			TestConstantMath,
 			"765779577a935a93887c0431323330aa887c06737472696e67aa887c91697b011493879a",
+		},
+		{
+			"VerifySignature",
+			VerifySignature,
+			"5279557aac697c7bac",
 		},
 	}
 

@@ -20,6 +20,7 @@ func InstantiateContract(contract *compiler.Contract, args []compiler.ContractAr
 	return program, nil
 }
 
+// ConvertArguments convert input argument into contract argument
 func ConvertArguments(contract *compiler.Contract, args []string) ([]compiler.ContractArg, error) {
 	var contractArgs []compiler.ContractArg
 	for i, p := range contract.Params {
@@ -65,6 +66,17 @@ func ConvertArguments(contract *compiler.Contract, args []string) ([]compiler.Co
 				return nil, err
 			}
 			argument.S = (*chainjson.HexBytes)(&commonValue)
+
+		case "Sign":
+			if len(args[i]) != 128 {
+				return nil, errors.New("mismatch length for Sign argument")
+			}
+
+			signValue, err := hex.DecodeString(args[i])
+			if err != nil {
+				return nil, err
+			}
+			argument.S = (*chainjson.HexBytes)(&signValue)
 
 		case "Program":
 			program, err := hex.DecodeString(args[i])

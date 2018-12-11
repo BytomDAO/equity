@@ -1,0 +1,29 @@
+contract FixedLimitProfit(assetBill: Asset,
+                          totalAmountBill: Amount,
+                          totalAmountCapital: Amount,
+                          expireBlockHeight: Integer,
+                          additionalBlockHeight: Integer,
+                          banker: Program,
+                          bankerKey: PublicKey) locks capitalAmount of capitalAsset {
+  clause profit(amountBill: Amount, saver: Program) {
+    verify above(expireBlockHeight)
+    define sAmountBill: Integer = amountBill/100000000
+    define sTotalAmountBill: Integer = totalAmountBill/100000000
+    verify sAmountBill > 0 && sTotalAmountBill > 0 && amountBill < totalAmountBill
+    define gain: Integer = totalAmountCapital*sAmountBill/sTotalAmountBill
+    verify gain > 0
+    if gain < capitalAmount {
+      lock amountBill of assetBill with banker
+      lock gain of capitalAsset with saver
+      lock capitalAmount - gain of capitalAsset with FixedLimitProfit(assetBill, totalAmountBill, totalAmountCapital, expireBlockHeight, additionalBlockHeight, banker, bankerKey)
+    } else {
+      lock amountBill of assetBill with banker
+      lock capitalAmount of capitalAsset with saver
+    }
+  }
+  clause cancel(bankerSig: Signature) {
+    verify above(additionalBlockHeight)
+    verify checkTxSig(bankerKey, bankerSig)
+    unlock capitalAmount of capitalAsset
+  }
+}

@@ -1,0 +1,33 @@
+import "./FixedLimitProfit"
+
+contract FixedLimitCollect(assetDeposited: Asset,
+                           totalAmountBill: Amount,
+                           totalAmountCapital: Amount,
+                           dueBlockHeight: Integer,
+                           expireBlockHeight: Integer,
+                           additionalBlockHeight: Integer,
+                           banker: Program,
+                           bankerKey: PublicKey) locks billAmount of billAsset {
+  clause collect(amountDeposited: Amount, saver: Program) {
+    verify below(dueBlockHeight)
+    verify amountDeposited/100000000 > 0 && amountDeposited <= billAmount && totalAmountBill <= totalAmountCapital
+    define sAmountDeposited: Integer = amountDeposited/100000000
+    define sTotalAmountBill: Integer = totalAmountBill/100000000
+    verify sAmountDeposited > 0 && sTotalAmountBill > 0
+    define gain: Integer = totalAmountCapital*sAmountDeposited/sTotalAmountBill
+    verify gain > 0
+    if amountDeposited < billAmount {
+      lock amountDeposited of assetDeposited with FixedLimitProfit(billAsset, totalAmountBill, totalAmountCapital, expireBlockHeight, additionalBlockHeight, banker, bankerKey)
+      lock amountDeposited of billAsset with saver
+      lock billAmount-amountDeposited of billAsset with FixedLimitCollect(assetDeposited, totalAmountBill, totalAmountCapital, dueBlockHeight, expireBlockHeight, additionalBlockHeight, banker, bankerKey)
+    } else {
+      lock amountDeposited of assetDeposited with FixedLimitProfit(billAsset, totalAmountBill, totalAmountCapital, expireBlockHeight, additionalBlockHeight, banker, bankerKey)
+      lock billAmount of billAsset with saver
+    }
+  }
+  clause cancel(bankerSig: Signature) {
+    verify above(dueBlockHeight)
+    verify checkTxSig(bankerKey, bankerSig)
+    unlock billAmount of billAsset
+  }
+}

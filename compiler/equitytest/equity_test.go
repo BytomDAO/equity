@@ -16,6 +16,10 @@ func TestCompileContract(t *testing.T) {
 		want     string
 	}{
 		{
+			"./LockPosition",
+			"cd9f697b7bae7cac6900c3c251547ac1",
+		},
+		{
 			"./RepayCollateral",
 			"557a641f0000007bcda069007b7b51547ac16951c3c251547ac1632a0000007bcd9f6900c3c251567ac1",
 		},

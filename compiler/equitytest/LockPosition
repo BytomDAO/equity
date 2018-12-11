@@ -1,0 +1,9 @@
+contract LockPosition(expireBlockHeight: Integer,
+                      saver: Program,
+                      publicKey: PublicKey) locks lockAmount of lockAsset {
+  clause expire(sig: Signature) {
+    verify above(expireBlockHeight)
+    verify checkTxSig(publicKey, sig)
+    lock lockAmount of lockAsset with saver
+  }
+}

@@ -85,22 +85,16 @@ func Compile(r io.Reader) ([]*Contract, error) {
 			return nil, errors.Wrap(err, "compiling contract")
 		}
 		for _, clause := range contract.Clauses {
+			index := 0
+			conditions := make(map[string]string)
+			condValues := make(map[string][]ValueInfo)
 			for _, stmt := range clause.statements {
-				switch s := stmt.(type) {
-				case *lockStatement:
-					valueInfo := ValueInfo{
-						Amount:  s.lockedAmount.String(),
-						Asset:   s.lockedAsset.String(),
-						Program: s.program.String(),
-					}
-
-					clause.Values = append(clause.Values, valueInfo)
-				case *unlockStatement:
-					valueInfo := ValueInfo{
-						Amount: contract.Value.Amount,
-						Asset:  contract.Value.Asset,
-					}
-					clause.Values = append(clause.Values, valueInfo)
+				valueInfo := calClauseValues(contract, stmt, conditions, condValues, &index)
+				if valueInfo != nil {
+					clause.Values = append(clause.Values, *valueInfo)
+				} else {
+					clause.Conditions = conditions
+					clause.CondValues = condValues
 				}
 			}
 		}

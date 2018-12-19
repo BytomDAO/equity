@@ -39,6 +39,50 @@ func checkStatRecursive(stmt statement, contractName string) bool {
 	return false
 }
 
+func calClauseValues(contract *Contract, stmt statement, conditions map[string]string, condValues map[string][]ValueInfo, index *int) (valueInfo *ValueInfo) {
+	switch s := stmt.(type) {
+	case *ifStatement:
+		*index++
+		strIndex := fmt.Sprintf("%d", *index)
+		conditions["condition_"+strIndex] = s.condition.String()
+
+		trueValues := []ValueInfo{}
+		for _, trueStmt := range s.body.trueBody {
+			trueValue := calClauseValues(contract, trueStmt, conditions, condValues, index)
+			if trueValue != nil {
+				trueValues = append(trueValues, *trueValue)
+			}
+		}
+		condValues["truebody_"+strIndex] = trueValues
+
+		if len(s.body.falseBody) != 0 {
+			falseValues := []ValueInfo{}
+			for _, falseStmt := range s.body.falseBody {
+				falseValue := calClauseValues(contract, falseStmt, conditions, condValues, index)
+				if falseValue != nil {
+					falseValues = append(falseValues, *falseValue)
+				}
+			}
+			condValues["falsebody_"+strIndex] = falseValues
+		}
+
+	case *lockStatement:
+		valueInfo = &ValueInfo{
+			Amount:  s.lockedAmount.String(),
+			Asset:   s.lockedAsset.String(),
+			Program: s.program.String(),
+		}
+
+	case *unlockStatement:
+		valueInfo = &ValueInfo{
+			Amount: contract.Value.Amount,
+			Asset:  contract.Value.Asset,
+		}
+	}
+
+	return valueInfo
+}
+
 func prohibitSigParams(contract *Contract) error {
 	for _, p := range contract.Params {
 		if p.Type == sigType {

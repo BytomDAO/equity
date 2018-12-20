@@ -39,6 +39,74 @@ func checkStatRecursive(stmt statement, contractName string) bool {
 	return false
 }
 
+func calClauseValues(contract *Contract, env *environ, stmt statement, conditions map[string]Condition, condValues map[string][]ValueInfo, index *int) (valueInfo *ValueInfo) {
+	switch s := stmt.(type) {
+	case *ifStatement:
+		*index++
+		strIndex := fmt.Sprintf("%d", *index)
+
+		conditionCounts := make(map[string]int)
+		s.condition.countVarRefs(conditionCounts)
+
+		params := []*Param{}
+		for v := range conditionCounts {
+			if entry := env.lookup(v); entry != nil && (entry.r == roleContractParam || entry.r == roleContractValue || entry.r == roleClauseParam || entry.r == roleClauseVariable) {
+				params = append(params, &Param{Name: v, Type: entry.t})
+			}
+		}
+
+		condition := Condition{Source: s.condition.String(), Params: params}
+		conditions["condition_"+strIndex] = condition
+
+		trueValues := []ValueInfo{}
+		for _, trueStmt := range s.body.trueBody {
+			trueValue := calClauseValues(contract, env, trueStmt, conditions, condValues, index)
+			if trueValue != nil {
+				trueValues = append(trueValues, *trueValue)
+			}
+		}
+		condValues["truebody_"+strIndex] = trueValues
+
+		if len(s.body.falseBody) != 0 {
+			falseValues := []ValueInfo{}
+			for _, falseStmt := range s.body.falseBody {
+				falseValue := calClauseValues(contract, env, falseStmt, conditions, condValues, index)
+				if falseValue != nil {
+					falseValues = append(falseValues, *falseValue)
+				}
+			}
+			condValues["falsebody_"+strIndex] = falseValues
+		}
+
+	case *lockStatement:
+		valueInfo = &ValueInfo{
+			Amount:  s.lockedAmount.String(),
+			Asset:   s.lockedAsset.String(),
+			Program: s.program.String(),
+		}
+
+		lockCounts := make(map[string]int)
+		s.lockedAmount.countVarRefs(lockCounts)
+		if _, ok := lockCounts[s.lockedAmount.String()]; !ok {
+			params := []*Param{}
+			for v := range lockCounts {
+				if entry := env.lookup(v); entry != nil && (entry.r == roleContractParam || entry.r == roleContractValue || entry.r == roleClauseParam || entry.r == roleClauseVariable) {
+					params = append(params, &Param{Name: v, Type: entry.t})
+				}
+			}
+			valueInfo.Params = params
+		}
+
+	case *unlockStatement:
+		valueInfo = &ValueInfo{
+			Amount: contract.Value.Amount,
+			Asset:  contract.Value.Asset,
+		}
+	}
+
+	return valueInfo
+}
+
 func prohibitSigParams(contract *Contract) error {
 	for _, p := range contract.Params {
 		if p.Type == sigType {

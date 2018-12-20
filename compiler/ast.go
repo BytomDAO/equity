@@ -74,8 +74,41 @@ type Clause struct {
 	// Values is the list of values unlocked or relocked in this clause.
 	Values []ValueInfo `json:"values"`
 
+	// Conditions is the list of condition for if-else statements which body contains
+	// the lock or unlock statement in this clause.
+	Conditions map[string]Condition `json:"conditions"`
+
+	// CondValues is the map of values unlocked or relocked in this clause's
+	// if-else statements which body contains the lock or unlock statement.
+	CondValues map[string][]ValueInfo `json:"cond_values"`
+
 	// Contracts is the list of contracts called by this clause.
 	Contracts []string `json:"contracts,omitempty"`
+}
+
+// ValueInfo describes how a blockchain value is used in a contract clause.
+type ValueInfo struct {
+	// Name is the clause's name for this value.
+	Name string `json:"name"`
+
+	// Program is the program expression used to the lock the value, if
+	// the value is locked with "lock." If it's unlocked with "unlock"
+	// instead, this is empty.
+	Program string `json:"program,omitempty"`
+
+	// Asset is the expression describing the asset type the value must
+	// have, as it appears in a clause's "requires" section. If this is
+	// the contract value instead, this is empty.
+	Asset string `json:"asset,omitempty"`
+
+	// Amount is the expression describing the amount the value must
+	// have, as it appears in a clause's "requires" section. If this is
+	// the contract value instead, this is empty.
+	Amount string `json:"amount,omitempty"`
+
+	// Params is the list of parameters for amount expression. If the value
+	// of amount is a variable, this is empty.
+	Params []*Param `json:"params,omitempty"`
 }
 
 // HashCall describes a call to a hash function.
@@ -90,13 +123,21 @@ type HashCall struct {
 	ArgType string `json:"arg_type"`
 }
 
-// IfBody describes a if ... else ... struct
-type IfStatmentBody struct {
-	// if statements body
-	trueBody []statement
+// Condition describes a condition expression.
+type Condition struct {
+	// Source is the string format of condition expression.
+	Source string `json:"source"`
 
-	// else statements body
-	falseBody []statement
+	// Params is the list of parameters for condition expression.
+	Params []*Param `json:"params,omitempty"`
+}
+
+// ContractArg is an argument with which to instantiate a contract as
+// a program. Exactly one of B, I, and S should be supplied.
+type ContractArg struct {
+	B *bool               `json:"boolean,omitempty"`
+	I *int64              `json:"integer,omitempty"`
+	S *chainjson.HexBytes `json:"string,omitempty"`
 }
 
 type statement interface {
@@ -119,6 +160,15 @@ type assignStatement struct {
 
 func (s assignStatement) countVarRefs(counts map[string]int) {
 	s.expr.countVarRefs(counts)
+}
+
+// IfStatmentBody describes the content of if-else structure
+type IfStatmentBody struct {
+	// if body statements
+	trueBody []statement
+
+	// else body statements
+	falseBody []statement
 }
 
 type ifStatement struct {
@@ -265,15 +315,15 @@ func (v varRef) String() string {
 	return string(v)
 }
 
-func (e varRef) typ(env *environ) typeDesc {
-	if entry := env.lookup(string(e)); entry != nil {
+func (v varRef) typ(env *environ) typeDesc {
+	if entry := env.lookup(string(v)); entry != nil {
 		return entry.t
 	}
 	return nilType
 }
 
-func (e varRef) countVarRefs(counts map[string]int) {
-	counts[string(e)]++
+func (v varRef) countVarRefs(counts map[string]int) {
+	counts[string(v)]++
 }
 
 type bytesLiteral []byte

@@ -24,7 +24,6 @@ const (
 	roleContractValue
 	roleClause
 	roleClauseParam
-	roleClauseValue
 	roleClauseVariable
 )
 
@@ -36,7 +35,6 @@ var roleDesc = map[role]string{
 	roleContractValue:  "contract value",
 	roleClause:         "clause",
 	roleClauseParam:    "clause parameter",
-	roleClauseValue:    "clause value",
 	roleClauseVariable: "clause variable",
 }
 

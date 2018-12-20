@@ -12,36 +12,6 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
-// ValueInfo describes how a blockchain value is used in a contract
-// clause.
-type ValueInfo struct {
-	// Name is the clause's name for this value.
-	Name string `json:"name"`
-
-	// Program is the program expression used to the lock the value, if
-	// the value is locked with "lock." If it's unlocked with "unlock"
-	// instead, this is empty.
-	Program string `json:"program,omitempty"`
-
-	// Asset is the expression describing the asset type the value must
-	// have, as it appears in a clause's "requires" section. If this is
-	// the contract value instead, this is empty.
-	Asset string `json:"asset,omitempty"`
-
-	// Amount is the expression describing the amount the value must
-	// have, as it appears in a clause's "requires" section. If this is
-	// the contract value instead, this is empty.
-	Amount string `json:"amount,omitempty"`
-}
-
-// ContractArg is an argument with which to instantiate a contract as
-// a program. Exactly one of B, I, and S should be supplied.
-type ContractArg struct {
-	B *bool               `json:"boolean,omitempty"`
-	I *int64              `json:"integer,omitempty"`
-	S *chainjson.HexBytes `json:"string,omitempty"`
-}
-
 // Compile parses a sequence of Equity contracts from the supplied reader
 // and produces Contract objects containing the compiled bytecode and
 // other analysis. If argMap is non-nil, it maps contract names to
@@ -83,26 +53,6 @@ func Compile(r io.Reader) ([]*Contract, error) {
 		err = compileContract(contract, globalEnv)
 		if err != nil {
 			return nil, errors.Wrap(err, "compiling contract")
-		}
-		for _, clause := range contract.Clauses {
-			for _, stmt := range clause.statements {
-				switch s := stmt.(type) {
-				case *lockStatement:
-					valueInfo := ValueInfo{
-						Amount:  s.lockedAmount.String(),
-						Asset:   s.lockedAsset.String(),
-						Program: s.program.String(),
-					}
-
-					clause.Values = append(clause.Values, valueInfo)
-				case *unlockStatement:
-					valueInfo := ValueInfo{
-						Amount: contract.Value.Amount,
-						Asset:  contract.Value.Asset,
-					}
-					clause.Values = append(clause.Values, valueInfo)
-				}
-			}
 		}
 	}
 
@@ -326,6 +276,19 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	for _, stat := range clause.statements {
 		if stk, err = compileStatement(b, stk, contract, env, clause, counts, stat, sequence); err != nil {
 			return err
+		}
+	}
+
+	conditions := make(map[string]Condition)
+	condValues := make(map[string][]ValueInfo)
+	index := 0
+	for _, stmt := range clause.statements {
+		valueInfo := calClauseValues(contract, env, stmt, conditions, condValues, &index)
+		if valueInfo != nil {
+			clause.Values = append(clause.Values, *valueInfo)
+		} else {
+			clause.Conditions = conditions
+			clause.CondValues = condValues
 		}
 	}
 

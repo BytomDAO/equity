@@ -74,13 +74,9 @@ type Clause struct {
 	// Values is the list of values unlocked or relocked in this clause.
 	Values []ValueInfo `json:"values"`
 
-	// Conditions is the list of condition for if-else statements which body contains
-	// the lock or unlock statement in this clause.
-	Conditions map[string]Condition `json:"conditions"`
-
-	// CondValues is the map of values unlocked or relocked in this clause's
+	// CondValues is the list of condition values unlocked or relocked in this clause's
 	// if-else statements which body contains the lock or unlock statement.
-	CondValues map[string][]ValueInfo `json:"cond_values"`
+	CondValues []CondValueInfo `json:"cond_values"`
 
 	// Contracts is the list of contracts called by this clause.
 	Contracts []string `json:"contracts,omitempty"`
@@ -126,8 +122,23 @@ type HashCall struct {
 	ArgType string `json:"arg_type"`
 }
 
-// Condition describes a condition expression.
-type Condition struct {
+// CondValueInfo describes a struct for if-else statements which body
+// contains the lock or unlock statement.
+type CondValueInfo struct {
+	// condition is the condition expression for if-else statements.
+	Condition ConditionInfo `json:"condition"`
+
+	// TrueBodyValues is the list of values unlocked or relocked in the trueBody
+	// for if-else statements.
+	TrueBodyValues []ValueInfo `json:"true_body"`
+
+	// FalseBodyValues is the list of values unlocked or relocked in the falseBody
+	// for if-else statements.
+	FalseBodyValues []ValueInfo `json:"false_body"`
+}
+
+// ConditionInfo describes a condition expression.
+type ConditionInfo struct {
 	// Source is the string format of condition expression.
 	Source string `json:"source"`
 

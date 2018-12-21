@@ -39,38 +39,35 @@ func checkStatRecursive(stmt statement, contractName string) bool {
 	return false
 }
 
-func calClauseValues(contract *Contract, env *environ, stmt statement, conditions map[string]Condition, condValues map[string][]ValueInfo, index *int) (valueInfo *ValueInfo) {
+func calClauseValues(contract *Contract, env *environ, stmt statement, condValues *[]CondValueInfo) (valueInfo *ValueInfo) {
 	switch s := stmt.(type) {
 	case *ifStatement:
-		*index++
-		strIndex := fmt.Sprintf("%d", *index)
-
 		conditionCounts := make(map[string]int)
 		s.condition.countVarRefs(conditionCounts)
 		params := getParams(env, conditionCounts)
-
-		condition := Condition{Source: s.condition.String(), Params: params}
-		conditions["condition_"+strIndex] = condition
+		condition := ConditionInfo{Source: s.condition.String(), Params: params}
 
 		trueValues := []ValueInfo{}
 		for _, trueStmt := range s.body.trueBody {
-			trueValue := calClauseValues(contract, env, trueStmt, conditions, condValues, index)
+			var trueValue *ValueInfo
+			trueValue = calClauseValues(contract, env, trueStmt, condValues)
 			if trueValue != nil {
 				trueValues = append(trueValues, *trueValue)
 			}
 		}
-		condValues["truebody_"+strIndex] = trueValues
 
+		var falseValues []ValueInfo
 		if len(s.body.falseBody) != 0 {
-			falseValues := []ValueInfo{}
 			for _, falseStmt := range s.body.falseBody {
-				falseValue := calClauseValues(contract, env, falseStmt, conditions, condValues, index)
+				var falseValue *ValueInfo
+				falseValue = calClauseValues(contract, env, falseStmt, condValues)
 				if falseValue != nil {
 					falseValues = append(falseValues, *falseValue)
 				}
 			}
-			condValues["falsebody_"+strIndex] = falseValues
 		}
+		condValue := CondValueInfo{Condition: condition, TrueBodyValues: trueValues, FalseBodyValues: falseValues}
+		*condValues = append([]CondValueInfo{condValue}, *condValues...)
 
 	case *lockStatement:
 		valueInfo = &ValueInfo{

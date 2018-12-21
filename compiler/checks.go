@@ -47,13 +47,7 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condition
 
 		conditionCounts := make(map[string]int)
 		s.condition.countVarRefs(conditionCounts)
-
-		params := []*Param{}
-		for v := range conditionCounts {
-			if entry := env.lookup(v); entry != nil && (entry.r == roleContractParam || entry.r == roleContractValue || entry.r == roleClauseParam || entry.r == roleClauseVariable) {
-				params = append(params, &Param{Name: v, Type: entry.t})
-			}
-		}
+		params := getParams(env, conditionCounts)
 
 		condition := Condition{Source: s.condition.String(), Params: params}
 		conditions["condition_"+strIndex] = condition
@@ -88,13 +82,24 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condition
 		lockCounts := make(map[string]int)
 		s.lockedAmount.countVarRefs(lockCounts)
 		if _, ok := lockCounts[s.lockedAmount.String()]; !ok {
-			params := []*Param{}
-			for v := range lockCounts {
-				if entry := env.lookup(v); entry != nil && (entry.r == roleContractParam || entry.r == roleContractValue || entry.r == roleClauseParam || entry.r == roleClauseVariable) {
-					params = append(params, &Param{Name: v, Type: entry.t})
+			valueInfo.AmountParams = getParams(env, lockCounts)
+		}
+
+		if res, ok := s.program.(*callExpr); ok {
+			if bi := referencedBuiltin(res.fn); bi == nil {
+				if v, ok := res.fn.(varRef); ok {
+					if entry := env.lookup(string(v)); entry != nil && entry.t == contractType {
+						for i := 0; i < len(res.args); i++ {
+							argCounts := make(map[string]int)
+							res.args[i].countVarRefs(argCounts)
+							if _, ok := argCounts[res.args[i].String()]; !ok {
+								params := getParams(env, argCounts)
+								valueInfo.ContractCalls = append(valueInfo.ContractCalls, CallArgs{Source: res.args[i].String(), Position: i, Params: params})
+							}
+						}
+					}
 				}
 			}
-			valueInfo.Params = params
 		}
 
 	case *unlockStatement:
@@ -105,6 +110,15 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condition
 	}
 
 	return valueInfo
+}
+
+func getParams(env *environ, counts map[string]int) (params []*Param) {
+	for v := range counts {
+		if entry := env.lookup(v); entry != nil && (entry.r == roleContractParam || entry.r == roleContractValue || entry.r == roleClauseParam || entry.r == roleClauseVariable) {
+			params = append(params, &Param{Name: v, Type: entry.t})
+		}
+	}
+	return params
 }
 
 func prohibitSigParams(contract *Contract) error {

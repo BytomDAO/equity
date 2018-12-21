@@ -106,9 +106,12 @@ type ValueInfo struct {
 	// the contract value instead, this is empty.
 	Amount string `json:"amount,omitempty"`
 
-	// Params is the list of parameters for amount expression. If the value
-	// of amount is a variable, this is empty.
-	Params []*Param `json:"params,omitempty"`
+	// ContractCalls is the list of arguments for program which is a contract.
+	ContractCalls []CallArgs `json:"contract_calls,omitempty"`
+
+	// AmountParams is the list of parameters for Amount expression.
+	// If the value of amount is a variable, this is empty.
+	AmountParams []*Param `json:"amount_params,omitempty"`
 }
 
 // HashCall describes a call to a hash function.
@@ -129,6 +132,18 @@ type Condition struct {
 	Source string `json:"source"`
 
 	// Params is the list of parameters for condition expression.
+	Params []*Param `json:"params,omitempty"`
+}
+
+// CallArgs describes a argument expression for function call.
+type CallArgs struct {
+	// Source is the string format of argument expression.
+	Source string `json:"source"`
+
+	// Position is the position of argument expression.
+	Position int `json:"position"`
+
+	// Params is the list of parameters for argument expression.
 	Params []*Param `json:"params,omitempty"`
 }
 

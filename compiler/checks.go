@@ -51,7 +51,7 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condValue
 		params := getParams(env, conditionCounts, &condExpr, tempVariables)
 		condition := ExpressionInfo{Source: condExpr, Params: params}
 
-		trueValues := []ValueInfo{}
+		var trueValues []ValueInfo
 		for _, trueStmt := range s.body.trueBody {
 			var trueValue *ValueInfo
 			trueValue = calClauseValues(contract, env, trueStmt, condValues, tempVariables)
@@ -122,18 +122,16 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condValue
 		if s.expr != nil {
 			defineCounts := make(map[string]int)
 			s.expr.countVarRefs(defineCounts)
-			params := getParams(env, defineCounts, nil, tempVariables)
-			tempVariables[s.variable.Name] = ExpressionInfo{Source: s.expr.String(), Params: params}
+			defineExpr := s.expr.String()
+			params := getParams(env, defineCounts, &defineExpr, tempVariables)
+			tempVariables[s.variable.Name] = ExpressionInfo{Source: defineExpr, Params: params}
 		}
 
 	case *assignStatement:
 		assignCounts := make(map[string]int)
 		s.expr.countVarRefs(assignCounts)
-		params := getParams(env, assignCounts, nil, tempVariables)
-		if _, ok := tempVariables[s.variable.Name]; ok && assignCounts[s.variable.Name] > 0 {
-			replacement := strings.Replace(s.expr.String(), s.variable.Name, tempVariables[s.variable.Name].Source, -1)
-			tempVariables[s.variable.Name] = ExpressionInfo{Source: replacement, Params: params}
-		}
+		assignExpr := s.expr.String()
+		params := getParams(env, assignCounts, &assignExpr, tempVariables)
 		tempVariables[s.variable.Name] = ExpressionInfo{Source: s.expr.String(), Params: params}
 	}
 

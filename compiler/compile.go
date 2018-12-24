@@ -279,8 +279,8 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 		}
 	}
 
+	var condValues []CondValueInfo
 	tempVariables := map[string]ExpressionInfo{}
-	condValues := []CondValueInfo{}
 	for _, stmt := range clause.statements {
 		valueInfo := calClauseValues(contract, env, stmt, &condValues, tempVariables)
 		if valueInfo != nil {

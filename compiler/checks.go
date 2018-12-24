@@ -73,13 +73,32 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condValue
 		condValue := CondValueInfo{Condition: condition, TrueBodyValues: trueValues, FalseBodyValues: falseValues}
 		*condValues = append([]CondValueInfo{condValue}, *condValues...)
 
+	case *defineStatement:
+		if s.expr != nil {
+			defineCounts := make(map[string]int)
+			s.expr.countVarRefs(defineCounts)
+			defineExpr := s.expr.String()
+			params := getParams(env, defineCounts, &defineExpr, tempVariables)
+			tempVariables[s.variable.Name] = ExpressionInfo{Source: defineExpr, Params: params}
+		}
+
+	case *assignStatement:
+		assignCounts := make(map[string]int)
+		s.expr.countVarRefs(assignCounts)
+		assignExpr := s.expr.String()
+		params := getParams(env, assignCounts, &assignExpr, tempVariables)
+		tempVariables[s.variable.Name] = ExpressionInfo{Source: s.expr.String(), Params: params}
+
 	case *lockStatement:
 		valueInfo = &ValueInfo{Asset: s.lockedAsset.String()}
 		lockCounts := make(map[string]int)
 		s.lockedAmount.countVarRefs(lockCounts)
 		lockedAmountExpr := s.lockedAmount.String()
-		if _, ok := lockCounts[s.lockedAmount.String()]; !ok {
+		if _, ok := lockCounts[lockedAmountExpr]; !ok {
 			valueInfo.AmountParams = getParams(env, lockCounts, &lockedAmountExpr, tempVariables)
+		} else if _, ok := tempVariables[lockedAmountExpr]; ok {
+			valueInfo.AmountParams = tempVariables[lockedAmountExpr].Params
+			lockedAmountExpr = tempVariables[lockedAmountExpr].Source
 		}
 		valueInfo.Amount = lockedAmountExpr
 
@@ -93,11 +112,12 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condValue
 							argExpr := res.args[i].String()
 							argCounts := make(map[string]int)
 							res.args[i].countVarRefs(argCounts)
-							if _, ok := argCounts[res.args[i].String()]; !ok {
+							if _, ok := argCounts[argExpr]; !ok {
 								params := getParams(env, argCounts, &argExpr, tempVariables)
 								valueInfo.ContractCalls = append(valueInfo.ContractCalls, CallArgs{Source: argExpr, Position: i, Params: params})
-							} else if _, ok := tempVariables[res.args[i].String()]; ok {
-								argExpr = tempVariables[res.args[i].String()].Source
+							} else if _, ok := tempVariables[argExpr]; ok {
+								valueInfo.ContractCalls = append(valueInfo.ContractCalls, CallArgs{Source: tempVariables[argExpr].Source, Position: i, Params: tempVariables[argExpr].Params})
+								argExpr = tempVariables[argExpr].Source
 							}
 
 							if i == len(res.args)-1 {
@@ -117,22 +137,6 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condValue
 			Amount: contract.Value.Amount,
 			Asset:  contract.Value.Asset,
 		}
-
-	case *defineStatement:
-		if s.expr != nil {
-			defineCounts := make(map[string]int)
-			s.expr.countVarRefs(defineCounts)
-			defineExpr := s.expr.String()
-			params := getParams(env, defineCounts, &defineExpr, tempVariables)
-			tempVariables[s.variable.Name] = ExpressionInfo{Source: defineExpr, Params: params}
-		}
-
-	case *assignStatement:
-		assignCounts := make(map[string]int)
-		s.expr.countVarRefs(assignCounts)
-		assignExpr := s.expr.String()
-		params := getParams(env, assignCounts, &assignExpr, tempVariables)
-		tempVariables[s.variable.Name] = ExpressionInfo{Source: s.expr.String(), Params: params}
 	}
 
 	return valueInfo

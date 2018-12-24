@@ -90,25 +90,20 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condValue
 					if entry := env.lookup(string(v)); entry != nil && entry.t == contractType {
 						programExpr = fmt.Sprintf("%s(", string(v))
 						for i := 0; i < len(res.args); i++ {
+							argExpr := res.args[i].String()
 							argCounts := make(map[string]int)
 							res.args[i].countVarRefs(argCounts)
 							if _, ok := argCounts[res.args[i].String()]; !ok {
-								argExpr := res.args[i].String()
 								params := getParams(env, argCounts, &argExpr, tempVariables)
 								valueInfo.ContractCalls = append(valueInfo.ContractCalls, CallArgs{Source: argExpr, Position: i, Params: params})
-								programExpr = fmt.Sprintf("%s%s", programExpr, argExpr)
-							} else {
-								if _, ok := tempVariables[res.args[i].String()]; ok {
-									programExpr = fmt.Sprintf("%s%s", programExpr, tempVariables[res.args[i].String()].Source)
-								} else {
-									programExpr = fmt.Sprintf("%s%s", programExpr, res.args[i].String())
-								}
+							} else if _, ok := tempVariables[res.args[i].String()]; ok {
+								argExpr = tempVariables[res.args[i].String()].Source
 							}
 
 							if i == len(res.args)-1 {
-								programExpr = fmt.Sprintf("%s)", programExpr)
+								programExpr = fmt.Sprintf("%s%s)", programExpr, argExpr)
 							} else {
-								programExpr = fmt.Sprintf("%s, ", programExpr)
+								programExpr = fmt.Sprintf("%s%s, ", programExpr, argExpr)
 							}
 						}
 					}

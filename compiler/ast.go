@@ -102,12 +102,12 @@ type ValueInfo struct {
 	// the contract value instead, this is empty.
 	Amount string `json:"amount,omitempty"`
 
-	// ContractCalls is the list of arguments for program which is a contract.
-	ContractCalls []CallArgs `json:"contract_calls,omitempty"`
-
 	// AmountParams is the list of parameters for Amount expression.
 	// If the value of amount is a variable, this is empty.
 	AmountParams []*Param `json:"amount_params,omitempty"`
+
+	// ContractCalls is the list of arguments for program which is a contract.
+	ContractCalls []CallArgs `json:"contract_calls,omitempty"`
 }
 
 // HashCall describes a call to a hash function.

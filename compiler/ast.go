@@ -126,7 +126,7 @@ type HashCall struct {
 // contains the lock or unlock statement.
 type CondValueInfo struct {
 	// condition is the condition expression for if-else statements.
-	Condition ConditionInfo `json:"condition"`
+	Condition ExpressionInfo `json:"condition"`
 
 	// TrueBodyValues is the list of values unlocked or relocked in the trueBody
 	// for if-else statements.
@@ -137,12 +137,12 @@ type CondValueInfo struct {
 	FalseBodyValues []ValueInfo `json:"false_body"`
 }
 
-// ConditionInfo describes a condition expression.
-type ConditionInfo struct {
-	// Source is the string format of condition expression.
+// ExpressionInfo describes a operational expression.
+type ExpressionInfo struct {
+	// Source is the string format of operational expression.
 	Source string `json:"source"`
 
-	// Params is the list of parameters for condition expression.
+	// Params is the list of parameters for operational expression.
 	Params []*Param `json:"params,omitempty"`
 }
 

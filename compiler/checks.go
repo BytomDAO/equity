@@ -1,6 +1,9 @@
 package compiler
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func checkRecursive(contract *Contract) bool {
 	for _, clause := range contract.Clauses {
@@ -39,18 +42,19 @@ func checkStatRecursive(stmt statement, contractName string) bool {
 	return false
 }
 
-func calClauseValues(contract *Contract, env *environ, stmt statement, condValues *[]CondValueInfo) (valueInfo *ValueInfo) {
+func calClauseValues(contract *Contract, env *environ, stmt statement, condValues *[]CondValueInfo, tempVariables map[string]ExpressionInfo) (valueInfo *ValueInfo) {
 	switch s := stmt.(type) {
 	case *ifStatement:
 		conditionCounts := make(map[string]int)
 		s.condition.countVarRefs(conditionCounts)
-		params := getParams(env, conditionCounts)
-		condition := ConditionInfo{Source: s.condition.String(), Params: params}
+		condExpr := s.condition.String()
+		params := getParams(env, conditionCounts, &condExpr, tempVariables)
+		condition := ExpressionInfo{Source: condExpr, Params: params}
 
 		trueValues := []ValueInfo{}
 		for _, trueStmt := range s.body.trueBody {
 			var trueValue *ValueInfo
-			trueValue = calClauseValues(contract, env, trueStmt, condValues)
+			trueValue = calClauseValues(contract, env, trueStmt, condValues, tempVariables)
 			if trueValue != nil {
 				trueValues = append(trueValues, *trueValue)
 			}
@@ -60,7 +64,7 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condValue
 		if len(s.body.falseBody) != 0 {
 			for _, falseStmt := range s.body.falseBody {
 				var falseValue *ValueInfo
-				falseValue = calClauseValues(contract, env, falseStmt, condValues)
+				falseValue = calClauseValues(contract, env, falseStmt, condValues, tempVariables)
 				if falseValue != nil {
 					falseValues = append(falseValues, *falseValue)
 				}
@@ -70,52 +74,105 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condValue
 		*condValues = append([]CondValueInfo{condValue}, *condValues...)
 
 	case *lockStatement:
-		valueInfo = &ValueInfo{
-			Amount:  s.lockedAmount.String(),
-			Asset:   s.lockedAsset.String(),
-			Program: s.program.String(),
-		}
-
+		valueInfo = &ValueInfo{Asset: s.lockedAsset.String()}
 		lockCounts := make(map[string]int)
 		s.lockedAmount.countVarRefs(lockCounts)
+		lockedAmountExpr := s.lockedAmount.String()
 		if _, ok := lockCounts[s.lockedAmount.String()]; !ok {
-			valueInfo.AmountParams = getParams(env, lockCounts)
+			valueInfo.AmountParams = getParams(env, lockCounts, &lockedAmountExpr, tempVariables)
 		}
+		valueInfo.Amount = lockedAmountExpr
 
+		programExpr := s.program.String()
 		if res, ok := s.program.(*callExpr); ok {
 			if bi := referencedBuiltin(res.fn); bi == nil {
 				if v, ok := res.fn.(varRef); ok {
 					if entry := env.lookup(string(v)); entry != nil && entry.t == contractType {
+						programExpr = fmt.Sprintf("%s(", string(v))
 						for i := 0; i < len(res.args); i++ {
 							argCounts := make(map[string]int)
 							res.args[i].countVarRefs(argCounts)
 							if _, ok := argCounts[res.args[i].String()]; !ok {
-								params := getParams(env, argCounts)
-								valueInfo.ContractCalls = append(valueInfo.ContractCalls, CallArgs{Source: res.args[i].String(), Position: i, Params: params})
+								argExpr := res.args[i].String()
+								params := getParams(env, argCounts, &argExpr, tempVariables)
+								valueInfo.ContractCalls = append(valueInfo.ContractCalls, CallArgs{Source: argExpr, Position: i, Params: params})
+								programExpr = fmt.Sprintf("%s%s", programExpr, argExpr)
+							} else {
+								if _, ok := tempVariables[res.args[i].String()]; ok {
+									programExpr = fmt.Sprintf("%s%s", programExpr, tempVariables[res.args[i].String()].Source)
+								} else {
+									programExpr = fmt.Sprintf("%s%s", programExpr, res.args[i].String())
+								}
+							}
+
+							if i == len(res.args)-1 {
+								programExpr = fmt.Sprintf("%s)", programExpr)
+							} else {
+								programExpr = fmt.Sprintf("%s, ", programExpr)
 							}
 						}
 					}
 				}
 			}
 		}
+		valueInfo.Program = programExpr
 
 	case *unlockStatement:
 		valueInfo = &ValueInfo{
 			Amount: contract.Value.Amount,
 			Asset:  contract.Value.Asset,
 		}
+
+	case *defineStatement:
+		if s.expr != nil {
+			defineCounts := make(map[string]int)
+			s.expr.countVarRefs(defineCounts)
+			params := getParams(env, defineCounts, nil, tempVariables)
+			tempVariables[s.variable.Name] = ExpressionInfo{Source: s.expr.String(), Params: params}
+		}
+
+	case *assignStatement:
+		assignCounts := make(map[string]int)
+		s.expr.countVarRefs(assignCounts)
+		params := getParams(env, assignCounts, nil, tempVariables)
+		if _, ok := tempVariables[s.variable.Name]; ok && assignCounts[s.variable.Name] > 0 {
+			replacement := strings.Replace(s.expr.String(), s.variable.Name, tempVariables[s.variable.Name].Source, -1)
+			tempVariables[s.variable.Name] = ExpressionInfo{Source: replacement, Params: params}
+		}
+		tempVariables[s.variable.Name] = ExpressionInfo{Source: s.expr.String(), Params: params}
 	}
 
 	return valueInfo
 }
 
-func getParams(env *environ, counts map[string]int) (params []*Param) {
+func getParams(env *environ, counts map[string]int, expr *string, tempVariables map[string]ExpressionInfo) (params []*Param) {
 	for v := range counts {
-		if entry := env.lookup(v); entry != nil && (entry.r == roleContractParam || entry.r == roleContractValue || entry.r == roleClauseParam || entry.r == roleClauseVariable) {
+		if entry := env.lookup(v); entry != nil && (entry.r == roleContractParam || entry.r == roleContractValue || entry.r == roleClauseParam) {
 			params = append(params, &Param{Name: v, Type: entry.t})
+		} else if entry.r == roleClauseVariable {
+			if expr != nil {
+				*expr = strings.Replace(*expr, v, tempVariables[v].Source, -1)
+			}
+
+			if _, ok := tempVariables[v]; ok {
+				for _, param := range tempVariables[v].Params {
+					if ok := checkParams(param, params); !ok {
+						params = append(params, &Param{Name: param.Name, Type: param.Type})
+					}
+				}
+			}
 		}
 	}
 	return params
+}
+
+func checkParams(param *Param, params []*Param) bool {
+	for _, p := range params {
+		if p.Name == param.Name {
+			return true
+		}
+	}
+	return false
 }
 
 func prohibitSigParams(contract *Contract) error {

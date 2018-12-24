@@ -146,7 +146,7 @@ type ExpressionInfo struct {
 	Params []*Param `json:"params,omitempty"`
 }
 
-// CallArgs describes a argument expression for function call.
+// CallArgs describes a argument expression for function or contract call.
 type CallArgs struct {
 	// Source is the string format of argument expression.
 	Source string `json:"source"`

@@ -87,7 +87,7 @@ func calClauseValues(contract *Contract, env *environ, stmt statement, condValue
 		s.expr.countVarRefs(assignCounts)
 		assignExpr := s.expr.String()
 		params := getParams(env, assignCounts, &assignExpr, tempVariables)
-		tempVariables[s.variable.Name] = ExpressionInfo{Source: s.expr.String(), Params: params}
+		tempVariables[s.variable.Name] = ExpressionInfo{Source: assignExpr, Params: params}
 
 	case *lockStatement:
 		valueInfo = &ValueInfo{Asset: s.lockedAsset.String()}

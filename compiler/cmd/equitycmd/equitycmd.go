@@ -90,7 +90,7 @@ func main() {
 	fmt.Fprintf(buf, "}\n\n")
 
 	for _, contract := range contracts {
-		fmt.Fprintf(buf, "// contract %s(%s) locks %s\n", contract.Name, paramsStr(contract.Params), contract.Value)
+		fmt.Fprintf(buf, "// contract %s(%s) locks %s of %s\n", contract.Name, paramsStr(contract.Params), contract.Value.Amount, contract.Value.Asset)
 		fmt.Fprintf(buf, "//\n")
 		maxWidth := 0
 		for _, step := range contract.Steps {

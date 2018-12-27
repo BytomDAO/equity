@@ -63,9 +63,8 @@ type Clause struct {
 
 	statements []statement
 
-	// BlockHeight is the list of expressions passed to greater()/less() in this
-	// clause.
-	BlockHeight []string `json:"blockheight,omitempty"`
+	// BlockHeight is the list of expressions passed to above()/below() in this clause.
+	BlockHeight []string `json:"block_height,omitempty"`
 
 	// HashCalls is the list of hash functions and their arguments used
 	// in this clause.

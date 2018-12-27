@@ -279,15 +279,13 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 		}
 	}
 
-	conditions := make(map[string]Condition)
-	condValues := make(map[string][]ValueInfo)
-	index := 0
+	var condValues []CondValueInfo
+	tempVariables := map[string]ExpressionInfo{}
 	for _, stmt := range clause.statements {
-		valueInfo := calClauseValues(contract, env, stmt, conditions, condValues, &index)
+		valueInfo := calClauseValues(contract, env, stmt, &condValues, tempVariables)
 		if valueInfo != nil {
 			clause.Values = append(clause.Values, *valueInfo)
 		} else {
-			clause.Conditions = conditions
 			clause.CondValues = condValues
 		}
 	}

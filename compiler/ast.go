@@ -63,9 +63,8 @@ type Clause struct {
 
 	statements []statement
 
-	// BlockHeight is the list of expressions passed to greater()/less() in this
-	// clause.
-	BlockHeight []string `json:"blockheight,omitempty"`
+	// BlockHeight is the list of expressions passed to above()/below() in this clause.
+	BlockHeight []string `json:"block_height,omitempty"`
 
 	// HashCalls is the list of hash functions and their arguments used
 	// in this clause.
@@ -74,13 +73,9 @@ type Clause struct {
 	// Values is the list of values unlocked or relocked in this clause.
 	Values []ValueInfo `json:"values"`
 
-	// Conditions is the list of condition for if-else statements which body contains
-	// the lock or unlock statement in this clause.
-	Conditions map[string]Condition `json:"conditions"`
-
-	// CondValues is the map of values unlocked or relocked in this clause's
+	// CondValues is the list of condition values unlocked or relocked in this clause's
 	// if-else statements which body contains the lock or unlock statement.
-	CondValues map[string][]ValueInfo `json:"cond_values"`
+	CondValues []CondValueInfo `json:"cond_values"`
 
 	// Contracts is the list of contracts called by this clause.
 	Contracts []string `json:"contracts,omitempty"`
@@ -106,9 +101,12 @@ type ValueInfo struct {
 	// the contract value instead, this is empty.
 	Amount string `json:"amount,omitempty"`
 
-	// Params is the list of parameters for amount expression. If the value
-	// of amount is a variable, this is empty.
-	Params []*Param `json:"params,omitempty"`
+	// AmountParams is the list of parameters for Amount expression.
+	// If the value of amount is a variable, this is empty.
+	AmountParams []*Param `json:"amount_params,omitempty"`
+
+	// ContractCalls is the list of arguments for program which is a contract.
+	ContractCalls []CallArgs `json:"contract_calls,omitempty"`
 }
 
 // HashCall describes a call to a hash function.
@@ -123,12 +121,39 @@ type HashCall struct {
 	ArgType string `json:"arg_type"`
 }
 
-// Condition describes a condition expression.
-type Condition struct {
-	// Source is the string format of condition expression.
+// CondValueInfo describes a struct for if-else statements which body
+// contains the lock or unlock statement.
+type CondValueInfo struct {
+	// condition is the condition expression for if-else statements.
+	Condition ExpressionInfo `json:"condition"`
+
+	// TrueBodyValues is the list of values unlocked or relocked in the trueBody
+	// for if-else statements.
+	TrueBodyValues []ValueInfo `json:"true_body"`
+
+	// FalseBodyValues is the list of values unlocked or relocked in the falseBody
+	// for if-else statements.
+	FalseBodyValues []ValueInfo `json:"false_body"`
+}
+
+// ExpressionInfo describes a operational expression.
+type ExpressionInfo struct {
+	// Source is the string format of operational expression.
 	Source string `json:"source"`
 
-	// Params is the list of parameters for condition expression.
+	// Params is the list of parameters for operational expression.
+	Params []*Param `json:"params,omitempty"`
+}
+
+// CallArgs describes a argument expression for function or contract call.
+type CallArgs struct {
+	// Source is the string format of argument expression.
+	Source string `json:"source"`
+
+	// Position is the position of argument expression.
+	Position int `json:"position"`
+
+	// Params is the list of parameters for argument expression.
 	Params []*Param `json:"params,omitempty"`
 }
 

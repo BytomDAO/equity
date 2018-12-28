@@ -10,25 +10,28 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/equity/compiler"
-	equityutil "github.com/equity/equity/util"
+	equ "github.com/equity/equity/util"
 )
 
 const (
 	strBin      string = "bin"
 	strShift    string = "shift"
 	strInstance string = "instance"
+	strAst      string = "ast"
 )
 
 var (
 	bin      = false
 	shift    = false
 	instance = false
+	ast      = false
 )
 
 func init() {
 	equityCmd.PersistentFlags().BoolVar(&bin, strBin, false, "Binary of the contracts in hex.")
 	equityCmd.PersistentFlags().BoolVar(&shift, strShift, false, "Function shift of the contracts.")
 	equityCmd.PersistentFlags().BoolVar(&instance, strInstance, false, "Object of the Instantiated contracts.")
+	equityCmd.PersistentFlags().BoolVar(&ast, strAst, false, "AST of the contracts.")
 }
 
 func main() {
@@ -77,7 +80,7 @@ var equityCmd = &cobra.Command{
 
 			if shift {
 				fmt.Println("Clause shift:")
-				clauseMap, err := equityutil.Shift(contract)
+				clauseMap, err := equ.Shift(contract)
 				if err != nil {
 					fmt.Println("Statistics contract clause shift error:", err)
 					os.Exit(0)
@@ -106,18 +109,28 @@ var equityCmd = &cobra.Command{
 					os.Exit(0)
 				}
 
-				contractArgs, err := equityutil.ConvertArguments(contract, args[1:len(contract.Params)+1])
+				contractArgs, err := equ.ConvertArguments(contract, args[1:len(contract.Params)+1])
 				if err != nil {
 					fmt.Println("Convert arguments into contract parameters error:", err)
 					os.Exit(0)
 				}
 
-				instantProg, err := equityutil.InstantiateContract(contract, contractArgs)
+				instantProg, err := equ.InstantiateContract(contract, contractArgs)
 				if err != nil {
 					fmt.Println("Instantiate contract error:", err)
 					os.Exit(0)
 				}
 				fmt.Printf("%v\n\n", hex.EncodeToString(instantProg))
+			}
+
+			if ast {
+				fmt.Println("Ast:")
+				rawData, err := equ.JSONMarshal(contract, true)
+				if err != nil {
+					fmt.Println("Marshal the struct of contract to json error:", err)
+					os.Exit(0)
+				}
+				fmt.Println(string(rawData))
 			}
 		}
 	},

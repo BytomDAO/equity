@@ -1,19 +1,21 @@
 PACKAGES    := $(shell go list ./... | grep -v '/vendor/')
+BUILD_FLAGS := -ldflags "-X github.com/equity/compiler.GitCommit=`git rev-parse HEAD`"
 
-all: test equitycmd
+all: test cmd equity
 
-equitycmd:
-	@echo "Building equitycmd to compiler/cmd/equitycmd/equitycmd"
-	@go build -o compiler/cmd/equitycmd/equitycmd compiler/cmd/equitycmd/equitycmd.go
+cmd:
+	@echo "Building equitycmd to target/equitycmd"
+	@go build $(BUILD_FLAGS) -o target/equitycmd compiler/cmd/equitycmd/equitycmd.go
 
-tool:
-	@echo "Building equity to equity/equity"
-	@go build -o equity/equity equity/main.go
+equity:
+	@echo "Building equity to target/equity"
+	@go build $(BUILD_FLAGS) -o target/equity equity/main.go
 
 clean:
-	@echo "Cleaning binaries built..."
-	@rm -rf compiler/cmd/equitycmd/equitycmd
-	@echo "Done."
+	@rm -rf target/equitycmd
+	@echo "Remove equitycmd successfully."
+	@rm -rf target/equity
+	@echo "Remove equity successfully."
 
 test:
 	@echo "====> Running go test"
@@ -21,4 +23,4 @@ test:
 
 ci: test
 
-.PHONY: all clean test ci
+.PHONY: all clean test ci cmd equity

@@ -22,13 +22,13 @@ release: equity
 	cd target && cp -f equity $(EQUITY_RELEASE).exe
 	cd target && md5sum $(EQUITY_RELEASE).exe > $(EQUITY_RELEASE).md5
 	cd target && zip $(EQUITY_RELEASE).zip $(EQUITY_RELEASE).exe $(EQUITY_RELEASE).md5
-	cd target && rm -f $(EQUITY_RELEASE).exe $(EQUITY_RELEASE).md5
+	cd target && rm -f equity $(EQUITY_RELEASE).exe $(EQUITY_RELEASE).md5
 else
 release: equity
 	cd target && cp -f equity $(EQUITY_RELEASE)
 	cd target && md5sum $(EQUITY_RELEASE) > $(EQUITY_RELEASE).md5
 	cd target && tar -czf $(EQUITY_RELEASE).tgz $(EQUITY_RELEASE) $(EQUITY_RELEASE).md5
-	cd target && rm -f $(EQUITY_RELEASE) $(EQUITY_RELEASE).md5
+	cd target && rm -f equity $(EQUITY_RELEASE) $(EQUITY_RELEASE).md5
 endif
 
 release-all: clean

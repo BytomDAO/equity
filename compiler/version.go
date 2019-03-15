@@ -3,9 +3,12 @@ package compiler
 import "fmt"
 
 const (
-	VersionMajor = 0 // Major version component of the current release
-	VersionMinor = 1 // Minor version component of the current release
-	VersionPatch = 1 // Patch version component of the current release
+	// VersionMajor is the Major version component of the current release
+	VersionMajor = 0
+	// VersionMinor is the Minor version component of the current release
+	VersionMinor = 1
+	// VersionPatch is the Patch version component of the current release
+	VersionPatch = 1
 )
 
 // Git SHA1 commit hash of the release (set via linker flags)
@@ -16,6 +19,7 @@ var Version = func() string {
 	return fmt.Sprintf("%d.%d.%d", VersionMajor, VersionMinor, VersionPatch)
 }()
 
+// VersionWithCommit holds the textual version and the first 8 character of git commit.
 func VersionWithCommit(gitCommit string) string {
 	version := Version
 	if len(gitCommit) >= 8 {

@@ -9,10 +9,10 @@ The equity compiler tool is the equity commandline compiler.
 Build source code, the build target of the equity compiler commandline tool is `equity`.
 
 ```bash
-$ make tool
+$ make equity
 ```
 
-then change directory to `equity`, and you can find the tool `equity` :
+then change directory to `equity`, and you can find the commandline tool `equity` :
 ```bash
 $ cd equity
 ```

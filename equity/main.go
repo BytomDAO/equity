@@ -18,6 +18,7 @@ const (
 	strShift    string = "shift"
 	strInstance string = "instance"
 	strAst      string = "ast"
+	strVersion  string = "version"
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 	shift    = false
 	instance = false
 	ast      = false
+	version  = false
 )
 
 func init() {
@@ -32,6 +34,7 @@ func init() {
 	equityCmd.PersistentFlags().BoolVar(&shift, strShift, false, "Function shift of the contracts.")
 	equityCmd.PersistentFlags().BoolVar(&instance, strInstance, false, "Object of the Instantiated contracts.")
 	equityCmd.PersistentFlags().BoolVar(&ast, strAst, false, "AST of the contracts.")
+	equityCmd.PersistentFlags().BoolVar(&version, strVersion, false, "Version of equity compiler.")
 }
 
 func main() {
@@ -45,8 +48,14 @@ var equityCmd = &cobra.Command{
 	Use:     "equity <input_file>",
 	Short:   "equity commandline compiler",
 	Example: "equity contract_name [contract_args...] --bin --instance",
-	Args:    cobra.RangeArgs(1, 100),
+	Args:    cobra.RangeArgs(0, 100),
 	Run: func(cmd *cobra.Command, args []string) {
+		if version {
+			version := compiler.VersionWithCommit(compiler.GitCommit)
+			fmt.Println("Version:", version)
+			os.Exit(0)
+		}
+
 		if len(args) < 1 {
 			cmd.Usage()
 		}

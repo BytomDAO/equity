@@ -414,7 +414,7 @@ func typeCheckStatement(stat statement, contractValue ValueInfo, clauseName stri
 		if t := stmt.unlockedAsset.typ(env); t != assetType {
 			return fmt.Errorf("unlockedAsset expression \"%s\" in unlock statement of clause \"%s\" has type \"%s\", must be Asset", stmt.unlockedAsset, clauseName, t)
 		}
-		if stmt.unlockedAmount.String() != contractValue.Amount || stmt.unlockedAsset.String() != contractValue.Asset {
+		if stmt.unlockedAsset.String() != contractValue.Asset {
 			return fmt.Errorf("amount \"%s\" of asset \"%s\" expression in unlock statement of clause \"%s\" must be the contract valueAmount \"%s\" of valueAsset \"%s\"",
 				stmt.unlockedAmount.String(), stmt.unlockedAsset.String(), clauseName, contractValue.Amount, contractValue.Asset)
 		}
